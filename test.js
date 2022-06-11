@@ -1,0 +1,26 @@
+const bcrypt = require('bcrypt');
+const { generateFromEmail } = require("unique-username-generator");
+
+const hashPassword = async (password) => {
+    const hash = await bcrypt.hash(password, 10);
+    return hash
+    // console.log(hash);
+    // const compare = await bcrypt.compare("maria", "$2b$10$tIYhIjxpPN.6TG/UIBrruOPyYJg507flhKx9kV/eEbkFnAn63q/Au")
+    // console.log(compare)
+};
+
+console.log(hashPassword("maria"))
+
+const hash = bcrypt.hash("maria", 10)
+console.log(hash)
+
+// let name = "Sebastian Vettel"
+
+// let username = name.toLowerCase().split(" ").join("");
+
+// console.log(username)
+
+// const username = generateFromEmail(
+//     "lakshmi.narayan@example.com"
+//   );
+//   console.log(username); // lakshminarayan234
