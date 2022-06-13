@@ -1,5 +1,5 @@
 const { createJwtAccess, createJwtEmail } = require("../lib/jwt");
-const { registerService, loginService, sendEmailService } = require('../services/authenticationService')
+const { registerService, loginService, sendEmailService, changePassword } = require('../services/authenticationService');
 const { dbCon } = require("./../connection");
 const myCache = require("./../lib/cache");
 
@@ -94,7 +94,7 @@ const verifyAccount = async (req, res) => {
         throw { message: "Your account is already verified" };
       };
 
-      //Verifying user
+      //Verify user
       sql = `update user set ? where id = ?`;
       let updateData = {
         is_verified: 1,
@@ -113,8 +113,114 @@ const verifyAccount = async (req, res) => {
     };
 };
 
+//Send email forgot password
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    let sql, conn;
+    try {
+        conn = await dbCon.promise().getConnection();
+  
+        sql = `select email, name, id from user where email = ?`;
+  
+        let [result] = await conn.query(sql, email);
+  
+        //Create something unique
+        let timecreated = new Date().getTime();
+        const dataToken = {
+          id: result[0].id,
+          username: result[0].name,
+          email: result[0].email,
+          timecreated
+        };
+  
+        //Caching
+        let caching = myCache.set(email, dataToken, 300);
+        if(!caching){
+          throw "Caching failed"
+        };
+
+        //Create token email
+        const tokenEmail = createJwtEmail(dataToken);
+
+        //Send email
+        let templateDir = "../templates/verificationTemplate.html";
+        let title = "Reset password";
+
+        await sendEmailService(result[0], tokenEmail, templateDir, title);
+
+        conn.release();
+        // res.set("x-token-access", tokenEmail);
+        return res.status(200).send({ message: "Email sent!" });
+      } catch (error) {
+        console.log(error);
+        conn.release();
+        return res.status(500).send({ message: error.message || error });
+      };
+};
+
+//Reset or forgot password
+const resetPassword = async () => {
+    const { id } = req.user;
+    try {
+        const { data:userData } = await changePassword(req.body, id); 
+        return res.status(200).send(userData);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({ message : error.message || error })
+    };
+};
+
+//Email verification
+const sendEmailVerification = async (req, res) => {
+    const { id } = req.user;
+    console.log(req.user)
+
+    let conn, sql;
+    try {
+        conn = await dbCon.promise().getConnection();
+
+        sql = `select id, username, email from user where id = ?`
+
+        let [result] = await conn.query(sql, id)
+        //Create something unique
+        let timecreated = new Date().getTime()
+        const dataToken = {
+            id: id,
+            username: result[0].username,
+            email: result[0].email,
+            timecreated
+        };
+
+        //Caching
+        let caching = myCache.set( id, dataToken, 300);
+        if(!caching){
+            throw "Caching failed"
+        };
+        
+        //Create token email
+        const tokenEmail = createJwtEmail(dataToken);
+
+        //kirim email verifikasi
+        let templateDir = "../templates/verificationTemplate.html";
+        let title = "Verify it's you";
+
+        await sendEmailService(result[0], tokenEmail, templateDir, title);
+
+        conn.release();
+        return res.status(200).send({ message: "Email sent successfully" });
+    } catch (error) {
+      console.log(error);
+      conn.release();
+      return res.status(200).send({ message: error.message || error });
+    };
+  };
+
 module.exports = {
     register,
     login,
-    keepLogin
+    keepLogin,
+    forgotPassword,
+    resetPassword,
+    sendEmailVerification
 }

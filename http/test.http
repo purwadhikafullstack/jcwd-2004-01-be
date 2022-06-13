@@ -13,6 +13,34 @@ POST http://localhost:5000/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-    "name" : "raditya_am",
+    "name" : "radityaaqil",
     "password" : "aaaaaaaaA1!"
+}
+
+###
+
+POST http://localhost:5000/auth/forgotpassword HTTP/1.1
+Content-Type: application/json
+
+{
+    "email" : "haepram@gmail.com"
+}
+
+###
+
+POST http://localhost:5000/auth/forgotpassword/resetpassword HTTP/1.1
+Content-Type: application/json
+
+{
+    "password" : "aaaaaaaaA2!"
+}
+
+###
+
+GET http://localhost:5000/auth/keeplogin HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjAsInVzZXJuYW1lIjoicmFkaXR5YV9hbSIsImlhdCI6MTY0OTI0MjA5MiwiZXhwIjoxNjQ5MjQ5MjkyfQ.HOKiIWtYZv1SdC6jhjDc4p1wgHSX-aAHmYLuNw7oy_g
+
+{
+
 }

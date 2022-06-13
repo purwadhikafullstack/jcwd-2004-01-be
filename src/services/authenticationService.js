@@ -6,6 +6,7 @@ const nodemailer = require("nodemailer");
 const handlebars = require("handlebars");
 const path = require("path");
 const fs = require("fs");
+const morgan = require("morgan");
 
 //Password Hashing & Comparing
 const hashPassword = async (inputPassword) => {
@@ -51,7 +52,7 @@ const registerService = async(data) => {
         return { data : userData[0]};
     } catch (error) {
         conn.release();
-      throw new Error(error.message || error)
+        throw new Error(error.message || error)
     };
 };
 
@@ -107,7 +108,7 @@ const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
         
         const template = handlebars.compile(htmlString);
 
-        const htmlToEmail = template({ username:userData.name, link,});
+        const htmlToEmail = template({ username:userData.name, link});
 
         //Send Email
         await transporter.sendMail({
@@ -123,8 +124,39 @@ const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
     };
 };
 
+//Change password
+const changePassword = async (data, id) => {
+    // const { id } = req.user
+    const { password } = data
+
+    let conn, sql;
+
+    try {
+      conn = await dbCon.promise().getConnection();
+
+      sql = `update user set ? where id = ?`;
+
+      let updateData = {
+        password : await hashPassword(password)
+      };
+
+      await conn.query(sql, [updateData, id]);
+
+      sql = `select * from user where id = ?`;
+
+      let [userData] = await conn.query(sql, id);
+
+      conn.release();
+      return { data : userData[0]};
+    } catch (error) {
+      conn.release();
+      throw new Error(error.message || error);
+    };
+  };
+
 module.exports = {
     registerService,
     loginService,
-    sendEmailService
+    sendEmailService,
+    changePassword,
 };
