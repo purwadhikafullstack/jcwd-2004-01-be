@@ -46,7 +46,7 @@ const registerService = async(data) => {
         let [result1] = await conn.query(sql, insertData);
         
         //Send user data
-        sql = `select id,name,email from user where id = ?`;
+        sql = `select id,name,email,role_id from user where id = ?`;
         let [userData] = await conn.query(sql, [result1.insertId]);
         conn.release();
         return { data : userData[0]};

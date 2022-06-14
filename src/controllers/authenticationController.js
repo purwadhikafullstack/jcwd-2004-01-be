@@ -19,7 +19,7 @@ const register = async (req, res) => {
         let caching = myCache.set(userData.id, dataToken, 300);
         if(!caching){
             throw "Caching failed"
-        }
+        };
         
         //Create Token Access and Token Email
         const tokenAccess = createJwtAccess(dataToken);
@@ -222,5 +222,6 @@ module.exports = {
     keepLogin,
     forgotPassword,
     resetPassword,
-    sendEmailVerification
+    sendEmailVerification,
+    verifyAccount
 }
