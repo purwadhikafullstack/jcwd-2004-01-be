@@ -48,7 +48,7 @@ const register = async (req, res) => {
 //Login Controller
 const login = async (req, res) => {
   try {
-    const { data: userData } = await loginAdminService(req.body);
+    const { data: userData } = await loginService(req.body);
 
     //Create data token
     const dataToken = {
