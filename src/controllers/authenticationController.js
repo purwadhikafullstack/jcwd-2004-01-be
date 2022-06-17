@@ -9,6 +9,8 @@ const {
   verifyAccountService,
   forgotPasswordService,
   verifymeService,
+  changePassword,
+  loginAdminService,
 } = require("../services/authenticationService");
 const { dbCon } = require("./../connection");
 const myCache = require("./../lib/cache");
@@ -134,6 +136,7 @@ const forgotPassword = async (req, res) => {
     return res.status(200).send({ message: "Email sent!" });
   } catch (error) {
     console.log(error);
+    conn.release();
     return res.status(500).send({ message: error.message || error });
   }
 };

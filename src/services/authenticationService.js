@@ -297,4 +297,6 @@ module.exports = {
   resetPassword,
   changePassword,
   verifymeService,
+  changePassword,
+  loginAdminService,
 };
