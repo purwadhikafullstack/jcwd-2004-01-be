@@ -67,6 +67,28 @@ const login = async (req, res) => {
     //Create token acces
     const tokenAccess = createJwtAccess(dataToken);
     res.set("x-token-access", tokenAccess);
+    console.log(tokenAccess);
+    return res.status(200).send(userData);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+const loginAdmin = async (req, res) => {
+  try {
+    const { data: userData } = await loginAdminService(req.body);
+    //Create data token
+    const dataToken = {
+      id: userData.id,
+      username: userData.username,
+      role_id: userData.role_id,
+    };
+
+    //Create token acces
+    const tokenAccess = createJwtAccess(dataToken);
+    res.set("x-token-access", tokenAccess);
+    console.log(tokenAccess);
     // console.log(tokenAccess);
     return res.status(200).send(userData);
   } catch (error) {
@@ -202,6 +224,27 @@ const verifyMe = async (req, res) => {
   }
 };
 
+const test = async (req, res) => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise();
+    sql = `select id, username, email from user where id = ?`;
+    let [result] = await conn.query(sql, 1);
+    return res.status(200).send(result[0]);
+  } catch (error) {
+    return res.status(200).send({ message: error.message || error });
+  }
+};
+
+const checklRole = async (req, res) => {
+  try {
+    return res.status(200).send(req.user);
+  } catch (error) {
+    return res.status(200).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -210,5 +253,8 @@ module.exports = {
   resetForgotPassword,
   verifyMe,
   verifyAccount,
+  loginAdmin,
+  test,
+  checklRole,
   changeNewPassword,
 };

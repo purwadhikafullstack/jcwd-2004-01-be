@@ -72,6 +72,7 @@ const loginService = async (data) => {
     if ((await comparePassword(password, result[0].password)) === false) {
       throw "Credential mismatch";
     }
+
     conn.release();
 
     //Send user data
