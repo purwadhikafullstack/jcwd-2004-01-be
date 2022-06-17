@@ -3,6 +3,12 @@ const {
   registerService,
   loginService,
   sendEmailService,
+  keepLoginService,
+  resetPassword,
+  changePassword,
+  verifyAccountService,
+  forgotPasswordService,
+  verifymeService,
   changePassword,
   loginAdminService,
 } = require("../services/authenticationService");
@@ -34,7 +40,8 @@ const register = async (req, res) => {
     //Send email
     let templateDir = "../templates/verificationTemplate.html";
     let title = "Verify it's you!";
-    await sendEmailService(userData, tokenEmail, templateDir, title);
+    let route = "verification";
+    await sendEmailService(userData, tokenEmail, templateDir, title, route);
 
     //Send user data and token to log in
     res.set("x-token-access", tokenAccess);
@@ -48,7 +55,7 @@ const register = async (req, res) => {
 //Login Controller
 const login = async (req, res) => {
   try {
-    const { data: userData } = await loginAdminService(req.body);
+    const { data: userData } = await loginService(req.body);
 
     //Create data token
     const dataToken = {
@@ -60,29 +67,7 @@ const login = async (req, res) => {
     //Create token acces
     const tokenAccess = createJwtAccess(dataToken);
     res.set("x-token-access", tokenAccess);
-    console.log(tokenAccess);
-    return res.status(200).send(userData);
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({ message: error.message || error });
-  }
-};
-
-const loginAdmin = async (req, res) => {
-  try {
-    const { data: userData } = await loginAdminService(req.body);
-
-    //Create data token
-    const dataToken = {
-      id: userData.id,
-      username: userData.username,
-      role_id: userData.role_id,
-    };
-
-    //Create token acces
-    const tokenAccess = createJwtAccess(dataToken);
-    res.set("x-token-access", tokenAccess);
-    console.log(tokenAccess);
+    // console.log(tokenAccess);
     return res.status(200).send(userData);
   } catch (error) {
     console.log(error);
@@ -93,12 +78,10 @@ const loginAdmin = async (req, res) => {
 //Keep Login
 const keepLogin = async (req, res) => {
   const { id } = req.user;
-  let conn, sql;
   try {
-    conn = await dbCon.promise();
-    sql = `select * from user where id = ?`;
-    let [result] = await conn.query(sql, [id]);
-    return res.status(200).send(result[0]);
+    const { data } = await keepLoginService(id);
+    console.log(data.name, "ini data bosq");
+    return res.status(200).send(data);
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -108,34 +91,10 @@ const keepLogin = async (req, res) => {
 //Account Verification
 const verifyAccount = async (req, res) => {
   const { id } = req.user;
-  let conn, sql;
   try {
-    conn = await dbCon.promise().getConnection();
-
-    await conn.beginTransaction();
-
-    //Check user's verification status
-    sql = `select id from user where id = ? and is_verified = 1`;
-    let [userVerified] = await conn.query(sql, [id]);
-
-    if (userVerified.length) {
-      throw { message: "Your account is already verified" };
-    }
-
-    //Verify user
-    sql = `update user set ? where id = ?`;
-    let updateData = {
-      is_verified: 1,
-    };
-    await conn.query(sql, [updateData, id]);
-    sql = `select id,name,is_verified,email from user where id = ?`;
-    let [result] = await conn.query(sql, [id]);
-    await conn.commit();
-    conn.release();
-    return res.status(200).send(result[0]);
+    const { data } = await verifyAccountService(id);
+    return res.status(200).send(data);
   } catch (error) {
-    conn.rollback();
-    conn.release();
     console.log(error);
     return res.status(500).send({ message: error.message || error });
   }
@@ -145,20 +104,15 @@ const verifyAccount = async (req, res) => {
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
-  let sql, conn;
   try {
-    conn = await dbCon.promise().getConnection();
-
-    sql = `select email, name, id from user where email = ?`;
-
-    let [result] = await conn.query(sql, email);
+    const { data } = await forgotPasswordService(email);
 
     //Create something unique
     let timecreated = new Date().getTime();
     const dataToken = {
-      id: result[0].id,
-      username: result[0].name,
-      email: result[0].email,
+      id: data.id,
+      username: data.name,
+      email: data.email,
       timecreated,
     };
 
@@ -174,10 +128,10 @@ const forgotPassword = async (req, res) => {
     //Send email
     let templateDir = "../templates/verificationTemplate.html";
     let title = "Reset password";
+    let route = "resetpassword";
 
-    await sendEmailService(result[0], tokenEmail, templateDir, title);
+    await sendEmailService(data, tokenEmail, templateDir, title, route);
 
-    conn.release();
     // res.set("x-token-access", tokenEmail);
     return res.status(200).send({ message: "Email sent!" });
   } catch (error) {
@@ -188,7 +142,19 @@ const forgotPassword = async (req, res) => {
 };
 
 //Reset or forgot password
-const resetPassword = async () => {
+const resetForgotPassword = async (req, res) => {
+  const { id } = req.user;
+  try {
+    const { data: userData } = await resetPassword(req.body, id);
+    return res.status(200).send(userData);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Change Password
+const changeNewPassword = async (req, res) => {
   const { id } = req.user;
   try {
     const { data: userData } = await changePassword(req.body, id);
@@ -199,24 +165,18 @@ const resetPassword = async () => {
   }
 };
 
-//Email verification
-const sendEmailVerification = async (req, res) => {
+//VerifyMe
+const verifyMe = async (req, res) => {
   const { id } = req.user;
-  console.log(req.user);
-
-  let conn, sql;
   try {
-    conn = await dbCon.promise().getConnection();
+    const { data } = await verifymeService(id);
 
-    sql = `select id, username, email from user where id = ?`;
-
-    let [result] = await conn.query(sql, id);
     //Create something unique
     let timecreated = new Date().getTime();
     const dataToken = {
       id: id,
-      username: result[0].username,
-      email: result[0].email,
+      username: data.username,
+      email: data.email,
       timecreated,
     };
 
@@ -226,20 +186,18 @@ const sendEmailVerification = async (req, res) => {
       throw "Caching failed";
     }
 
-    //Create token email
     const tokenEmail = createJwtEmail(dataToken);
 
-    //kirim email verifikasi
+    //Send email
     let templateDir = "../templates/verificationTemplate.html";
     let title = "Verify it's you";
+    let route = "verification";
 
-    await sendEmailService(result[0], tokenEmail, templateDir, title);
+    await sendEmailService(data, tokenEmail, templateDir, title, route);
 
-    conn.release();
     return res.status(200).send({ message: "Email sent successfully" });
   } catch (error) {
     console.log(error);
-    conn.release();
     return res.status(200).send({ message: error.message || error });
   }
 };
@@ -249,8 +207,8 @@ module.exports = {
   login,
   keepLogin,
   forgotPassword,
-  resetPassword,
-  sendEmailVerification,
+  resetForgotPassword,
+  verifyMe,
   verifyAccount,
-  loginAdmin,
+  changeNewPassword,
 };

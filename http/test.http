@@ -14,7 +14,7 @@ Content-Type: application/json
 
 {
     "name" : "haepram",
-    "password" : "aaaaaaaaA1!"
+    "password" : "aaaaaaaaA7!"
 }
 
 ###
@@ -47,11 +47,13 @@ Authorization: Bearer
 
 ###
 
-POST http://localhost:5000/auth/forgotpassword/resetpassword HTTP/1.1
+POST http://localhost:5000/auth/changepassword HTTP/1.1
 Content-Type: application/json
+Authorization: Header eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwicm9sZV9pZCI6MCwiaWF0IjoxNjU1Mjk1NDQxLCJleHAiOjE2NTUzMTcwNDF9.GhQ3-rQZBnhtnd_DivyrmPMceotXxbro0ef56sZuGlk 
 
 {
-    "password" : "aaaaaaaaA2!"
+    "oldPassword" : "aaaaaaaaA1!",
+    "newPassword" : "aaaaaaaaA5!"
 }
 
 ###
