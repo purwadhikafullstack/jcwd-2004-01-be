@@ -1,5 +1,5 @@
-require('dotenv').config();
-const express = require('express');
+require("dotenv").config();
+const express = require("express");
 const app = express();
 const PORT = process.env.PORT;
 // const morgan = require("morgan");
@@ -15,21 +15,23 @@ const { dbCon } = require("./src/connection");
 // );
 
 //CORS
-app.use(cors({
-    exposedHeaders: ["x-total-count", "x-token-access"]
-}));
+app.use(
+  cors({
+    exposedHeaders: ["x-total-count", "x-token-access"],
+  })
+);
 
 //Middleware Log
 const logMiddleware = (req, res, next) => {
-    console.log(req.method, req.url, new Date().toString());
-    next();
+  console.log(req.method, req.url, new Date().toString());
+  next();
 };
 
 //JSON
 app.use(express.json());
 
 //PARSING INCOMING REQUEST
-app.use(express.urlencoded({ extended : false }));
+app.use(express.urlencoded({ extended: false }));
 
 app.use(logMiddleware);
 
@@ -37,12 +39,13 @@ app.use(express.static("public"));
 
 //GET
 app.get("/", (req, res) => {
-    res.send("<h1>Healthymed API ready</h1>")
+  res.send("<h1>Healthymed API ready</h1>");
 });
 
 // Auth Routes
-const { authenticationRoutes } = require("./src/routes");
+const { authenticationRoutes, productRoutes } = require("./src/routes");
 app.use("/auth", authenticationRoutes);
+app.use("/product", productRoutes);
 
 //LISTEN
-app.listen(PORT, () => console.log(`App running on PORT ${PORT}`))
+app.listen(PORT, () => console.log(`App running on PORT ${PORT}`));
