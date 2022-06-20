@@ -13,8 +13,8 @@ POST http://localhost:5000/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-    "name" : "haepram",
-    "password" : "aaaaaaaaA7!"
+    "username" : "radityaaqil",
+    "password" : "aaaaaaaaA1!"
 }
 
 ###
@@ -57,3 +57,11 @@ Authorization: Header eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OSwicm9sZV9pZ
 }
 
 ###
+
+POST http://localhost:5000/profile/updateusername HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU1NzA4ODM2LCJleHAiOjE2NTU3MzA0MzZ9.8ZgdGLFHeV5lnjLTHOETfjkyGp_wgAhse2Lu-GYSqsE
+
+{
+    "username" : "tes123"
+}
