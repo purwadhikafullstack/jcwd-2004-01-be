@@ -5,6 +5,7 @@ const PORT = process.env.PORT;
 const morgan = require("morgan");
 const cors = require("cors");
 const { dbCon } = require("./src/connection");
+const multer = require("multer");
 
 //Morgan
 morgan.token("date", function (req, res) {

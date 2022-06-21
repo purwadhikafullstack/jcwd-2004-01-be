@@ -23,7 +23,5 @@ Router.post("/changepassword", verifyTokenAccess, changeNewPassword); //TESTED A
 Router.post("/resetpassword", verifyTokenEmail, resetForgotPassword); //TESTED AND WORKED
 Router.get("/verifyme", verifyTokenAccess, verifyMe); //TESTED AND WORKED
 Router.get("/verification", verifyTokenEmail, verifyLastToken, verifyAccount); //TESTED AND WORKED
-Router.get("/test", test); //TESTED AND WORKED
-Router.get("/check-role", verifyTokenAccess, checklRole); //TESTED AND WORKED
 
 module.exports = Router;
