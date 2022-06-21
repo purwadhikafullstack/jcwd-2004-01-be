@@ -17,7 +17,6 @@ const {
 
 Router.post("/register", register); //TESTED AND WORKED
 Router.post("/login", login); //TESTED AND WORKED
-Router.post("/login-admin", loginAdmin); //TESTED AND WORKED
 Router.get("/keeplogin", verifyTokenAccess, keepLogin); //TESTED AND WORKED
 Router.post("/forgotpassword", forgotPassword); //TESTED AND WORKED
 Router.post("/changepassword", verifyTokenAccess, changeNewPassword); //TESTED AND WORKED

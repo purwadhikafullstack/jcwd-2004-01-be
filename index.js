@@ -34,9 +34,13 @@ app.get("/", (req, res) => {
   res.send("<h1>Healthymed API ready</h1>");
 });
 
-// Auth Routes
+//Auth Routes
 const { authenticationRoutes } = require("./src/routes");
 app.use("/auth", authenticationRoutes);
+
+//Userprofile Routes
+const { userprofileRoutes } = require("./src/routes");
+app.use("/profile", userprofileRoutes);
 
 //LISTEN
 app.listen(PORT, () => console.log(`App running on PORT ${PORT}`));

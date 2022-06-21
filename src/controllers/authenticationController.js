@@ -1,17 +1,16 @@
 const { createJwtAccess, createJwtEmail } = require("../lib/jwt");
+const { authenticationService } = require("./../services");
 const {
   registerService,
   loginService,
   sendEmailService,
   keepLoginService,
   resetPassword,
-  changePassword,
   verifyAccountService,
   forgotPasswordService,
   verifymeService,
   changePassword,
-  loginAdminService,
-} = require("../services/authenticationService");
+} = authenticationService;
 const { dbCon } = require("./../connection");
 const myCache = require("./../lib/cache");
 
@@ -23,7 +22,7 @@ const register = async (req, res) => {
     let timecreated = new Date().getTime();
     const dataToken = {
       id: userData.id,
-      username: userData.name,
+      username: userData.username,
       role_id: userData.role_id,
       timecreated,
     };
@@ -111,7 +110,7 @@ const forgotPassword = async (req, res) => {
     let timecreated = new Date().getTime();
     const dataToken = {
       id: data.id,
-      username: data.name,
+      username: data.username,
       email: data.email,
       timecreated,
     };

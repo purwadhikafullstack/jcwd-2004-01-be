@@ -29,7 +29,7 @@ const registerService = async (data) => {
     username = generateFromEmail(email);
 
     //Check username and email availability
-    sql = `select id from user where name = ? or email = ?`;
+    sql = `select id from user where username = ? or email = ?`;
     let [result] = await conn.query(sql, [username, email]);
     if (result.length) {
       throw "Username or email has already been used";
@@ -38,14 +38,14 @@ const registerService = async (data) => {
     //Insert user's data into table
     sql = `INSERT INTO user set ?`;
     let insertData = {
-      name: username,
+      username: username,
       email,
       password: await hashPassword(password),
     };
     let [result1] = await conn.query(sql, insertData);
 
     //Send user data
-    sql = `select id,name,email,role_id from user where id = ?`;
+    sql = `select id,username,email,role_id from user where id = ?`;
     let [userData] = await conn.query(sql, [result1.insertId]);
     conn.release();
     return { data: userData[0] };
@@ -58,14 +58,14 @@ const registerService = async (data) => {
 
 //Login Service
 const loginService = async (data) => {
-  let { name, email, password } = data;
+  let { username, email, password } = data;
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
 
     //Check user data
-    sql = `select * from user where (name = ? or email = ?)`;
-    let [result] = await conn.query(sql, [name, email]);
+    sql = `select * from user where (username = ? or email = ?)`;
+    let [result] = await conn.query(sql, [username, email]);
     if (!result.length) {
       throw "User not found";
     }
@@ -120,7 +120,7 @@ const verifyAccountService = async (id) => {
       is_verified: 1,
     };
     await conn.query(sql, [updateData, id]);
-    sql = `select id,name,is_verified,email from user where id = ?`;
+    sql = `select id,username,is_verified,email from user where id = ?`;
     let [result] = await conn.query(sql, [id]);
     await conn.commit();
     conn.release();
@@ -139,7 +139,7 @@ const forgotPasswordService = async (email) => {
   try {
     conn = await dbCon.promise().getConnection();
 
-    sql = `select email, name, id from user where email = ?`;
+    sql = `select email, username, id from user where email = ?`;
 
     let [result] = await conn.query(sql, email);
 
@@ -159,7 +159,7 @@ const verifymeService = async (id) => {
   try {
     conn = await dbCon.promise().getConnection();
 
-    sql = `select id, name, email from user where id = ?`;
+    sql = `select id, username, email from user where id = ?`;
 
     let [result] = await conn.query(sql, id);
     conn.release();
@@ -205,7 +205,7 @@ const sendEmailService = async (
 
     const template = handlebars.compile(htmlString);
 
-    const htmlToEmail = template({ username: userData.name, link });
+    const htmlToEmail = template({ username: userData.username, link });
 
     //Send Email
     await transporter.sendMail({
@@ -266,6 +266,12 @@ const changePassword = async (data, id) => {
       (await comparePassword(oldPassword, userPassword[0].password)) === false
     ) {
       throw "Wrong password!";
+    }
+
+    if (
+      (await comparePassword(newPassword, userPassword[0].password)) === true
+    ) {
+      throw "Please input new password!";
     }
 
     sql = `update user set ? where id = ?`;
