@@ -35,9 +35,10 @@ app.get("/", (req, res) => {
   res.send("<h1>Healthymed API ready</h1>");
 });
 
-//Auth Routes
-const { authenticationRoutes } = require("./src/routes");
+// Auth Routes
+const { authenticationRoutes, productRoutes } = require("./src/routes");
 app.use("/auth", authenticationRoutes);
+app.use("/product", productRoutes);
 
 //Userprofile Routes
 const { userprofileRoutes } = require("./src/routes");
