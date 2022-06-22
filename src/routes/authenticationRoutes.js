@@ -3,7 +3,6 @@ const Router = express.Router();
 const { verifyTokenAccess, verifyTokenEmail } = require("../lib/verifyToken");
 const { verifyLastToken } = require("../lib/verifyLastToken");
 const { authenticationController } = require("./../controllers");
-const { checklRole } = require("../controllers/authenticationController");
 const {
   register,
   login,
