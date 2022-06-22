@@ -2,17 +2,17 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT;
-// const morgan = require("morgan");
+const morgan = require("morgan");
 const cors = require("cors");
 const { dbCon } = require("./src/connection");
 
-// //Morgan
-// morgan.token("date", function (req, res) {
-//     return new Date().toString();
-//   });
-// app.use(
-// morgan(":method :url :status :res[content-length] - :response-time ms :date")
-// );
+//Morgan
+morgan.token("date", function (req, res) {
+  return new Date().toString();
+});
+app.use(
+  morgan(":method :url :status :res[content-length] - :response-time ms :date")
+);
 
 //CORS
 app.use(
@@ -21,19 +21,11 @@ app.use(
   })
 );
 
-//Middleware Log
-const logMiddleware = (req, res, next) => {
-  console.log(req.method, req.url, new Date().toString());
-  next();
-};
-
 //JSON
 app.use(express.json());
 
 //PARSING INCOMING REQUEST
 app.use(express.urlencoded({ extended: false }));
-
-app.use(logMiddleware);
 
 app.use(express.static("public"));
 
@@ -46,6 +38,10 @@ app.get("/", (req, res) => {
 const { authenticationRoutes, productRoutes } = require("./src/routes");
 app.use("/auth", authenticationRoutes);
 app.use("/product", productRoutes);
+
+//Userprofile Routes
+const { userprofileRoutes } = require("./src/routes");
+app.use("/profile", userprofileRoutes);
 
 //LISTEN
 app.listen(PORT, () => console.log(`App running on PORT ${PORT}`));

@@ -6,7 +6,6 @@ const nodemailer = require("nodemailer");
 const handlebars = require("handlebars");
 const path = require("path");
 const fs = require("fs");
-const morgan = require("morgan");
 
 //Password Hashing & Comparing
 const hashPassword = async (inputPassword) => {
@@ -30,27 +29,28 @@ const registerService = async (data) => {
     username = generateFromEmail(email);
 
     //Check username and email availability
-    sql = `select id from user where name = ? or email = ?`;
+    sql = `select id from user where username = ? or email = ?`;
     let [result] = await conn.query(sql, [username, email]);
     if (result.length) {
-      throw { message: "Username or email has already been used" };
+      throw "Username or email has already been used";
     }
 
     //Insert user's data into table
     sql = `INSERT INTO user set ?`;
     let insertData = {
-      name: username,
+      username: username,
       email,
       password: await hashPassword(password),
     };
     let [result1] = await conn.query(sql, insertData);
 
     //Send user data
-    sql = `select id,name,email,role_id from user where id = ?`;
+    sql = `select id,username,email,role_id from user where id = ?`;
     let [userData] = await conn.query(sql, [result1.insertId]);
     conn.release();
     return { data: userData[0] };
   } catch (error) {
+    console.log(error);
     conn.release();
     throw new Error(error.message || error);
   }
@@ -58,20 +58,21 @@ const registerService = async (data) => {
 
 //Login Service
 const loginService = async (data) => {
-  let { name, email, password } = data;
+  let { username, email, password } = data;
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
 
     //Check user data
     sql = `select * from user where (username = ? or email = ?)`;
-    let [result] = await conn.query(sql, [name, email]);
+    let [result] = await conn.query(sql, [username, email]);
     if (!result.length) {
       throw "User not found";
     }
     if ((await comparePassword(password, result[0].password)) === false) {
       throw "Credential mismatch";
     }
+
     conn.release();
 
     //Send user data
@@ -83,39 +84,101 @@ const loginService = async (data) => {
   }
 };
 
-// login admin service
-const loginAdminService = async (data) => {
-  let { name, email, password } = data;
+//Keep Login Service
+const keepLoginService = async (id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise();
+    sql = `select * from user where id = ?`;
+    let [result] = await conn.query(sql, [id]);
+    return { data: result[0] };
+  } catch (error) {
+    console.log(error);
+    throw new Error(error.message || error);
+  }
+};
+
+//Verify Account Service
+const verifyAccountService = async (id) => {
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
 
-    //Check user data
-    sql = `select * from user where (username = ? or email = ?)`;
-    let [result] = await conn.query(sql, [name, email]);
+    await conn.beginTransaction();
 
-    if (!result.length) {
-      throw "User not found";
+    //Check user's verification status
+    sql = `select id from user where id = ? and is_verified = 1`;
+    let [userVerified] = await conn.query(sql, [id]);
+
+    if (userVerified.length) {
+      throw { message: "Your account is already verified" };
     }
-    if ((await comparePassword(password, result[0].password)) === false) {
-      throw "Credential mismatch";
-    }
-    if (result[0].role_id != 1) {
-      throw "you are not an admin!";
-    }
+
+    //Verify user
+    sql = `update user set ? where id = ?`;
+    let updateData = {
+      is_verified: 1,
+    };
+    await conn.query(sql, [updateData, id]);
+    sql = `select id,username,is_verified,email from user where id = ?`;
+    let [result] = await conn.query(sql, [id]);
+    await conn.commit();
     conn.release();
-
-    //Send user data
     return { data: result[0] };
   } catch (error) {
+    conn.rollback();
     conn.release();
     console.log(error);
-    throw new Error(error || "Network Error");
+    throw new Error(error.message || error);
+  }
+};
+
+//Forgot Password Service
+const forgotPasswordService = async (email) => {
+  let sql, conn;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select email, username, id from user where email = ?`;
+
+    let [result] = await conn.query(sql, email);
+
+    conn.release();
+    // res.set("x-token-access", tokenEmail);
+    return { data: result[0] };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    return { message: error.message || error };
+  }
+};
+
+//Verifyme Service
+const verifymeService = async (id) => {
+  let sql, conn;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select id, username, email from user where id = ?`;
+
+    let [result] = await conn.query(sql, id);
+    conn.release();
+    return { data: result[0] };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    return { message: error.message || error };
   }
 };
 
 //Send Email Service
-const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
+const sendEmailService = async (
+  userData,
+  tokenEmail,
+  templateDir,
+  title,
+  route
+) => {
   try {
     //Nodemailer
     let transporter = nodemailer.createTransport({
@@ -134,7 +197,7 @@ const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
       process.env.NODE_ENV === "production"
         ? "http://namadomain.com"
         : "http://localhost:3000";
-    const link = `${host}/verification/${tokenEmail}`;
+    const link = `${host}/${route}/${tokenEmail}`;
 
     let filepath = path.resolve(__dirname, templateDir);
 
@@ -142,7 +205,7 @@ const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
 
     const template = handlebars.compile(htmlString);
 
-    const htmlToEmail = template({ username: userData.name, link });
+    const htmlToEmail = template({ username: userData.username, link });
 
     //Send Email
     await transporter.sendMail({
@@ -158,8 +221,8 @@ const sendEmailService = async (userData, tokenEmail, templateDir, title) => {
   }
 };
 
-//Change password
-const changePassword = async (data, id) => {
+//Reset password
+const resetPassword = async (data, id) => {
   // const { id } = req.user
   const { password } = data;
 
@@ -188,10 +251,58 @@ const changePassword = async (data, id) => {
   }
 };
 
+//Change Password
+const changePassword = async (data, id) => {
+  const { oldPassword, newPassword } = data;
+
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select password from user where id = ?`;
+    let [userPassword] = await conn.query(sql, id);
+    if (
+      (await comparePassword(oldPassword, userPassword[0].password)) === false
+    ) {
+      throw "Wrong password!";
+    }
+
+    if (
+      (await comparePassword(newPassword, userPassword[0].password)) === true
+    ) {
+      throw "Please input new password!";
+    }
+
+    sql = `update user set ? where id = ?`;
+
+    let updateData = {
+      password: await hashPassword(newPassword),
+    };
+
+    await conn.query(sql, [updateData, id]);
+
+    sql = `select * from user where id = ?`;
+
+    let [userData] = await conn.query(sql, id);
+
+    conn.release();
+    return { data: userData[0] };
+  } catch (error) {
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
 module.exports = {
   registerService,
   loginService,
   sendEmailService,
+  keepLoginService,
+  verifyAccountService,
+  forgotPasswordService,
+  resetPassword,
   changePassword,
-  loginAdminService,
+  verifymeService,
+  changePassword,
 };
