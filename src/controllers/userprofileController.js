@@ -6,6 +6,8 @@ const {
   updateGenderService,
   updatePhonenumberService,
   updateUsernameService,
+  updateProfilePictureService,
+  deleteProfilePictureService,
   getUpdatedUserprofileDataService,
 } = userprofileService;
 
@@ -81,6 +83,33 @@ const updateBirthdate = async (req, res) => {
   }
 };
 
+//Update profile picture
+const updateProfilePicture = async (req, res) => {
+  const { id } = req.user;
+  const profile_picture = req.file;
+  console.log(req.file, "ini req.file");
+  try {
+    const { data } = await updateProfilePictureService(profile_picture, id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Delete profile picture
+const deleteProfilePicture = async (req, res) => {
+  const { id } = req.user;
+  const imagePath = null;
+  try {
+    const { data } = await deleteProfilePictureService(imagePath, id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 //Get Updated User Profile Data
 const getUpdatedUserprofileData = async (req, res) => {
   const { id } = req.user;
@@ -100,5 +129,7 @@ module.exports = {
   updateEmail,
   updateGender,
   updateBirthdate,
+  updateProfilePicture,
+  deleteProfilePicture,
   getUpdatedUserprofileData,
 };

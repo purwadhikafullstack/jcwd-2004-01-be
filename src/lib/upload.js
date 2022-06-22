@@ -6,7 +6,7 @@ const upload = (destination, fileNamePrefix) => {
   const defaultPath = "./public";
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      console.log("line 15 isi file : ", file);
+      console.log("line 9 isi file : ", file);
       const dir = defaultPath + destination;
       if (fs.existsSync(dir)) {
         // ngecek apakah directory sudah ada atau belum
@@ -27,10 +27,10 @@ const upload = (destination, fileNamePrefix) => {
   });
 
   const fileFilter = (req, file, cb) => {
-    // tambahkan extension yang mau di upload jika tidak ada disini
-    const ext = /\.(jpg|jpeg|png|gif|pdf|doc|docx|xlsx|JPEG|JPG)$/; //regex
+    // tambahkan extention yang mau di upload jika tidak ada disini
+    const ext = /\.(jpg|jpeg|png|JPEG)$/; //regex
     if (!file.originalname.match(ext)) {
-      return cb(new Error("Only selected file types are allowed"), false);
+      return cb(new Error("Only selected file type are allowed"), false);
     }
     cb(null, true);
   };
