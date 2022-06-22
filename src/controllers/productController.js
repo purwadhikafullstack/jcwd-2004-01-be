@@ -1,9 +1,8 @@
-const { dbCon } = require("./../connection");
-const fs = require("fs");
 const {
   inputProductService,
   getSymptomService,
   getTypeService,
+  deleteProductService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -78,12 +77,7 @@ const getCategory = async (req, res) => {
   let conn, sql;
 
   try {
-    conn = await dbCon.promise().getConnection();
-
-    sql = `SELECT name FROM category`;
-    let [result] = await conn.query(sql);
-
-    conn.commit();
+    const result = await getCategoryService();
     return res.status(200).send(result);
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
@@ -110,9 +104,19 @@ const getType = async (req, res) => {
   }
 };
 
+const deleteProductController = async (req, res) => {
+  try {
+    const result = await deleteProductService();
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
   getSymptom,
   getType,
+  deleteProductController,
 };

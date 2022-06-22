@@ -304,9 +304,30 @@ const getTypeService = async (r) => {
   }
 };
 
+const deleteProductService = async (data) => {
+  const { id } = data;
+
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `UPDATE product SET is_deleted = ? WHERE id = ?`;
+    let [result] = await conn.query(sql, id);
+
+    conn.release();
+    return result;
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
   getSymptomService,
   getTypeService,
+  deleteProductService,
 };
