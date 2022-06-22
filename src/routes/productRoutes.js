@@ -1,6 +1,11 @@
 const express = require("express");
 const Router = express.Router();
-const { inputProductController } = require("../controllers/productController");
+const {
+  inputProductController,
+  getCategory,
+  getSymptom,
+  getType,
+} = require("../controllers/productController");
 
 const upload = require("../lib/upload");
 const { verifyTokenAccess } = require("../lib/verifyToken");
@@ -14,5 +19,9 @@ Router.post(
   uploader,
   inputProductController
 );
+
+Router.get("/get-category", getCategory);
+Router.get("/get-symptom", getSymptom);
+Router.get("/get-Type", getType);
 
 module.exports = Router;

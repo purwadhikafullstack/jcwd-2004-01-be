@@ -244,6 +244,14 @@ const sendEmailVerification = async (req, res) => {
   }
 };
 
+const checklRole = async (req, res) => {
+  try {
+    return res.status(200).send(req.user);
+  } catch (error) {
+    return res.status(200).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -253,4 +261,5 @@ module.exports = {
   sendEmailVerification,
   verifyAccount,
   loginAdmin,
+  checklRole,
 };

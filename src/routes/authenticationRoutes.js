@@ -12,6 +12,7 @@ const {
   sendEmailVerification,
   verifyAccount,
   loginAdmin,
+  checklRole,
 } = authenticationController;
 
 Router.post("/register", register); //TESTED AND WORKED
@@ -22,5 +23,6 @@ Router.post("/forgotpassword", forgotPassword); //TESTED AND WORKED
 Router.post("/forgotpassword/resetpassword", verifyTokenEmail, resetPassword);
 Router.get("/verifyme", verifyTokenAccess, sendEmailVerification);
 Router.get("/verification", verifyTokenEmail, verifyLastToken, verifyAccount); //TESTED AND WORKED
+Router.get("/check-role", verifyTokenAccess, checklRole); //TESTED AND WORKED
 
 module.exports = Router;
