@@ -75,8 +75,6 @@ const inputProductController = async (req, res) => {
 };
 
 const getCategory = async (req, res) => {
-  let conn, sql;
-
   try {
     const result = await getCategoryService();
     return res.status(200).send(result);
