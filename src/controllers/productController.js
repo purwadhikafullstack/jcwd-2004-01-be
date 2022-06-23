@@ -3,6 +3,7 @@ const {
   getSymptomService,
   getTypeService,
   deleteProductService,
+  getCategoryService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -81,8 +82,6 @@ const getCategory = async (req, res) => {
     return res.status(200).send(result);
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
-  } finally {
-    conn.release();
   }
 };
 
@@ -105,8 +104,10 @@ const getType = async (req, res) => {
 };
 
 const deleteProductController = async (req, res) => {
+  const { id } = req.query;
+  const data = { id: id };
   try {
-    const result = await deleteProductService();
+    const result = await deleteProductService(data);
     return res.status(200).send(result);
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
