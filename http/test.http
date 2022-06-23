@@ -13,13 +13,8 @@ POST http://localhost:5000/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-<<<<<<< HEAD
-    "username" : "radityaaqil",
+    "username" : "radityaa",
     "password" : "aaaaaaaaA1!"
-=======
-    "name" : "haepram",
-    "password" : "aaaaaaaaA7!"
->>>>>>> 6d95c6d11009bcae51d4c1909b46919a96dd7d29
 }
 
 ###
@@ -68,5 +63,45 @@ Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU1NzA4ODM2LCJleHAiOjE2NTU3MzA0MzZ9.8ZgdGLFHeV5lnjLTHOETfjkyGp_wgAhse2Lu-GYSqsE
 
 {
-    "username" : "tes123"
+    "username" : ""
+}
+
+###
+
+POST http://localhost:5000/profile/updatephonenumber HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU1NzA4ODM2LCJleHAiOjE2NTU3MzA0MzZ9.8ZgdGLFHeV5lnjLTHOETfjkyGp_wgAhse2Lu-GYSqsE
+
+{
+    "phonenumber" : ""
+}
+
+###
+
+POST http://localhost:5000/profile/updatefullname HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU1NzA4ODM2LCJleHAiOjE2NTU3MzA0MzZ9.8ZgdGLFHeV5lnjLTHOETfjkyGp_wgAhse2Lu-GYSqsE
+
+{
+    "fullname" : "Raditya Aqil"
+}
+
+###
+
+POST http://localhost:5000/profile/updategender HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU1NzA4ODM2LCJleHAiOjE2NTU3MzA0MzZ9.8ZgdGLFHeV5lnjLTHOETfjkyGp_wgAhse2Lu-GYSqsE
+
+{
+    "gender" : "wanita"
+}
+
+###
+
+GET http://localhost:5000/profile/getuserprofile HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJ0ZXMxMjM0Iiwicm9sZV9pZCI6InVzZXIiLCJpYXQiOjE2NTU3ODEyMzMsImV4cCI6MTY1NTgwMjgzM30.KBdD-5xqjCkrBE5SV2plvsaCbGWBT1tDVSqYvngHG30
+
+{
+    
 }

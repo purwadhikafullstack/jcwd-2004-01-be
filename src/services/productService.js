@@ -199,10 +199,10 @@ const inputProductService = async (
         ]);
       } else {
         sql = `INSERT INTO symptom (name) VALUES (?)`;
-        let [resultSymptom] = await conn.query(sql, symptomArr[i]);
-        let symptom_id = resultSymptory.insertId;
+        let [resultSymptomp] = await conn.query(sql, symptomArr[i]);
+        let symptom_id = resultSymptomp.insertId;
         sql = `INSERT INTO symptom_product (symptom_id, product_id) VALUES (?,?)`;
-        let [resultSymptomProduct] = await conn.query(sql, [
+        let [resultSymptompProduct] = await conn.query(sql, [
           symptom_id,
           product_id,
         ]);

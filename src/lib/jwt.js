@@ -2,15 +2,15 @@ const jwt = require("jsonwebtoken");
 
 //Token Access
 const createJwtAccess = (data) => {
-    return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "6h" });
+  return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "24h" });
 };
 
 //Token Email
 const createJwtEmail = (data) => {
-    return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "5m" });
+  return jwt.sign(data, process.env.JWT_SECRET, { expiresIn: "30m" });
 };
 
 module.exports = {
   createJwtAccess,
-  createJwtEmail
+  createJwtEmail,
 };
