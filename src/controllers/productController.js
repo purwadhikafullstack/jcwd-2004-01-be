@@ -106,7 +106,7 @@ const deleteProductController = async (req, res) => {
   const data = { id: id };
   try {
     const result = await deleteProductService(data);
-    return res.status(200).send(result);
+    return res.status(200).send({ message: "Delete product success!" });
   } catch (error) {
     return res.status(500).send({ message: error.message || error });
   }
