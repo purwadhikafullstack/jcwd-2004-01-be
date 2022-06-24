@@ -6,6 +6,7 @@ const {
   getSymptom,
   getType,
   deleteProductController,
+  getAllProductController,
 } = require("../controllers/productController");
 
 const upload = require("../lib/upload");
@@ -25,5 +26,6 @@ Router.get("/get-category", getCategory);
 Router.get("/get-symptom", getSymptom);
 Router.get("/get-Type", getType);
 Router.patch("/delete-product", deleteProductController);
+Router.get("/get-all-product", getAllProductController);
 
 module.exports = Router;

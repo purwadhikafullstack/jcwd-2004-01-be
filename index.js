@@ -7,7 +7,6 @@ const cors = require("cors");
 const { dbCon } = require("./src/connection");
 const multer = require("multer");
 
-//Morgan
 morgan.token("date", function (req, res) {
   return new Date().toString();
 });

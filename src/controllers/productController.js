@@ -1,9 +1,11 @@
+const { dbCon } = require("../connection");
 const {
   inputProductService,
   getSymptomService,
   getTypeService,
   deleteProductService,
   getCategoryService,
+  getAllProductService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -112,10 +114,32 @@ const deleteProductController = async (req, res) => {
   }
 };
 
+const getAllProductController = async (req, res) => {
+  let { search, page, limit, category, orderName, orderPrice } = req.query;
+  console.log(req.query);
+  console.log(search, page, limit, category, orderName, orderPrice);
+  try {
+    const result = await getAllProductService(
+      search,
+      page,
+      limit,
+      category,
+      orderName,
+      orderPrice
+    );
+
+    res.set("x-total-product", result.totalData[0].total_data);
+    return res.status(200).send(result.data);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
   getSymptom,
   getType,
   deleteProductController,
+  getAllProductController,
 };

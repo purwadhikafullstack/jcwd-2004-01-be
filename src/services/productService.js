@@ -338,10 +338,116 @@ const deleteProductService = async (data) => {
   }
 };
 
+const getAllProductService = async (
+  search,
+  page,
+  limit,
+  category,
+  orderName,
+  orderPrice
+) => {
+  let conn, sql;
+
+  console.log(
+    search,
+    page,
+    limit,
+    category,
+    orderName,
+    orderPrice,
+    "di service"
+  );
+
+  if (!category) {
+    category = ``;
+  } else {
+    category = `and category_name = "${category}"`;
+  }
+
+  if (!page) {
+    page = 0;
+  }
+
+  if (!limit) {
+    limit = 10;
+  }
+
+  if (!search) {
+    search = ``;
+  } else {
+    search = `AND product.name LIKE '%${search}%'`;
+  }
+
+  if (!orderName && !orderPrice) {
+    order = ``;
+  } else if (orderName && !orderPrice) {
+    order = `ORDER BY product.name ${orderName}`;
+  } else if (!orderName && orderPrice) {
+    order = `ORDER BY product.price ${orderPrice}`;
+  } else if (orderName && orderPrice) {
+    order = `ORDER BY product.name ${orderName}, product.price ${orderPrice}`;
+  }
+
+  if (!orderPrice) {
+    orderPrice = ``;
+  } else {
+    orderPrice = `ORDER BY poduct.price ${orderPrice}`;
+  }
+
+  limit = parseInt(limit);
+
+  let offset = page * limit;
+
+  console.log(order);
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    //get product for admin dashboard
+    sql = `select product.id, name, original_price, price, unit, no_obat, no_bpom,
+    (select sum(quantity) from stock where product_id = product.id) as total_stock from product
+    inner join category_product on product.id = category_product.product_id
+    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${search} AND product.is_deleted = "NO"
+    group by product.id ${order} LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(
+      limit
+    )}`;
+
+    let [data] = await conn.query(sql);
+    console.log(data[0]);
+
+    //put category on data
+    sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
+
+    for (let i = 0; i < data.length; i++) {
+      const element = data[i];
+      let [categories] = await conn.query(sql, element.id);
+      data[i].categories = categories;
+    }
+
+    sql = `select count(*) as total_data from (select product.id, name, original_price, price, unit, no_obat, no_bpom,
+      (select sum(quantity) from stock where product_id = product.id) as total_stock from product
+      inner join category_product on product.id = category_product.product_id
+      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${search} AND product.is_deleted = "NO"
+      group by product.id) as table_data`;
+
+    let [totalData] = await conn.query(sql);
+
+    // res.set("x-total-product", totalData[0].total_data);
+
+    conn.commit();
+    return { data, totalData };
+  } catch (error) {
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
   getSymptomService,
   getTypeService,
   deleteProductService,
+  getAllProductService,
 };
