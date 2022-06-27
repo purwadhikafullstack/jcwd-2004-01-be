@@ -319,10 +319,12 @@ const deleteProductService = async (data) => {
       throw "Product not found!";
     }
 
-    sql = `SELECT id FROM product where id = ? AND is_deleted = "?"`;
+    sql = `SELECT * FROM product where id = ? AND is_deleted = "?"`;
     let [alreadyDeletedProduct] = await conn.query(sql, [id, "YES"]);
 
-    if (!alreadyDeletedProduct.length) {
+    console.log(alreadyDeletedProduct[0]);
+
+    if (alreadyDeletedProduct.length) {
       throw "Product already deleted!";
     }
 
