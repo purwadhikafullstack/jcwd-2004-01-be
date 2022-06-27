@@ -185,7 +185,7 @@ const editProductController = async (req, res) => {
   console.log("image", image);
 
   try {
-    let res = await editProductService(
+    let result = await editProductService(
       name,
       original_price,
       price,

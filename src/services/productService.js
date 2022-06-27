@@ -610,6 +610,7 @@ const editProductService = async (
     sql = `select id, name FROM brand WHERE name = ?`;
     let [haveBrandName] = await conn.query(sql, brand_name);
     let brand_id;
+
     if (!haveBrandName.length) {
       sql = `INSERT INTO brand set ?`;
 
@@ -685,7 +686,7 @@ const editProductService = async (
 
     //   let resultStock = await conn.query(sql, [quantity, haveStockExp[0].id]);
     // } else {
-    sql = `UPDATE stock quantity = ?, expired_at = FROM_UNIXTIME(?) WHERE product_id = ?,`;
+    sql = `UPDATE stock SET quantity = ?, expired_at = FROM_UNIXTIME(?) WHERE stock.product_id = ?`;
     let [resultStock] = await conn.query(sql, [
       quantity,
       expired_at,
@@ -698,18 +699,24 @@ const editProductService = async (
     for (let i = 0; i < symptomArr.length; i++) {
       sql = `SELECT id FROM symptom WHERE name = ?`;
       let [haveSymptom] = await conn.query(sql, symptomArr[i]);
+
       if (haveSymptom.length) {
-        let symptom_id = haveSymptom[0].id;
-        sql = `UPDATE symptom_product (symptom_id, product_id) VALUES (?,?)`;
-        let [resultSymptomProduct] = await conn.query(sql, [
-          symptom_id,
-          product_id,
-        ]);
+        sql = `SELECT symptom_id, product_id FROM symptom_product WHERE symptom_product.product_id = ? AND symptom_id = ?`;
+        let [same] = await conn.query(sql, [product_id, haveSymptom[0].id]);
+
+        if (!same.length) {
+          let symptom_id = haveSymptom[0].id;
+          sql = `INSERT INTO symptom_product (symptom_id, product_id) VALUES (?,?)`;
+          let [resultSymptomProduct] = await conn.query(sql, [
+            symptom_id,
+            product_id,
+          ]);
+        }
       } else {
-        sql = `UPDATE symptom (name) VALUES (?)`;
+        sql = `INSERT INTO symptom (name) VALUES (?)`;
         let [resultSymptomp] = await conn.query(sql, symptomArr[i]);
         let symptom_id = resultSymptomp.insertId;
-        sql = `UPDATE symptom_product (symptom_id, product_id) VALUES (?,?)`;
+        sql = `INSERT INTO symptom_product (symptom_id, product_id) VALUES (?,?)`;
         let [resultSymptompProduct] = await conn.query(sql, [
           symptom_id,
           product_id,
@@ -723,17 +730,22 @@ const editProductService = async (
       sql = `SELECT id FROM category WHERE name = ?`;
       let [haveCategory] = await conn.query(sql, categoryArr[i]);
       if (haveCategory.length) {
-        let category_id = haveCategory[0].id;
-        sql = `UPDATE category_product (category_id, product_id) VALUES (?,?)`;
-        let [resultCategoryProduct] = await conn.query(sql, [
-          category_id,
-          product_id,
-        ]);
+        sql = `SELECT category_id, product_id FROM category_product WHERE category_product.product_id = ? AND category_id = ?`;
+        let [same] = await conn.query(sql, [product_id, haveCategory[0].id]);
+
+        if (!same.length) {
+          let category_id = haveCategory[0].id;
+          sql = `INSERT INTO category_product (category_id, product_id) VALUES (?,?)`;
+          let [resultCategoryProduct] = await conn.query(sql, [
+            category_id,
+            product_id,
+          ]);
+        }
       } else {
-        sql = `UPDATE category (name) VALUES (?)`;
+        sql = `INSERT INTO category (name) VALUES (?)`;
         let [resultCategory] = await conn.query(sql, categoryArr[i]);
         let category_id = resultCategory.insertId;
-        sql = `UPDATE category_product (category_id, product_id) VALUES (?,?)`;
+        sql = `INSERT INTO category_product (category_id, product_id) VALUES (?,?)`;
         let [resultCategoryProduct] = await conn.query(sql, [
           category_id,
           product_id,
