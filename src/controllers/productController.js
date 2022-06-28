@@ -179,6 +179,7 @@ const editProductController = async (req, res) => {
     symptom_name, //symptom table
     category_name, //category table
     product_id,
+    notDeletedImage,
   } = req.body;
   const { image } = req.files;
 
@@ -210,7 +211,8 @@ const editProductController = async (req, res) => {
       category_name,
       image,
       id,
-      product_id
+      product_id,
+      notDeletedImage
     );
 
     return res.status(200).send({ message: "input product success!" });

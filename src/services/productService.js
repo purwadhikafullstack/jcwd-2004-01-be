@@ -489,12 +489,9 @@ const getProductService = async (id) => {
 
     sql = `select image from product_image where product_id = ?`;
 
-    for (let i = 0; i < data.length; i++) {
-      const element = data[i];
-      const [resultImage] = await conn.query(sql, element.id);
+    const [resultImage] = await conn.query(sql, data[0].id);
 
-      data[i] = { ...data[i], imageProduct: resultImage };
-    }
+    data[0] = { ...data[0], imageProduct: resultImage };
 
     console.log(data[0]);
 
@@ -532,7 +529,8 @@ const editProductService = async (
   category_name,
   image,
   id,
-  product_id
+  product_id,
+  notDeletedImage
 ) => {
   let conn, sql;
   let jalur = "/image";
@@ -542,8 +540,9 @@ const editProductService = async (
   product_id = parseInt(product_id);
   console.log(product_id, "product_id");
 
-  symptomArr = JSON.parse(symptom_name);
-  categoryArr = JSON.parse(category_name);
+  let symptomArr = JSON.parse(symptom_name);
+  let categoryArr = JSON.parse(category_name);
+  let notDeletedImageArr = JSON.parse(notDeletedImage);
 
   const imagearrpath = image
     ? image.map((val) => {
@@ -551,13 +550,12 @@ const editProductService = async (
       })
     : [];
 
+  console.log(imagearrpath, "line 551");
   try {
     conn = await dbCon.promise().getConnection();
 
     await conn.beginTransaction();
-    if (!image) {
-      throw "Must upload at least one image!";
-    }
+
     if (
       !name ||
       !original_price ||
@@ -663,15 +661,40 @@ const editProductService = async (
     let [resultProdcut] = await conn.query(sql, dataTable);
     console.log(resultProdcut.insertId);
 
-    // insert into  posts_images
-    sql = `UPDATE product_image set ?`;
+    let resultImageWillDelete;
+
+    if (notDeletedImageArr.length) {
+      //get id image yang akan dihapus
+      sql = `SELECT id, image FROM product_image WHERE image NOT IN (?) AND product_id = ?`;
+      [resultImageWillDelete] = await conn.query(sql, [
+        notDeletedImageArr,
+        product_id,
+      ]);
+    } else {
+      sql = `SELECT id, image FROM product_image WHERE product_id = ?`;
+      [resultImageWillDelete] = await conn.query(sql, [product_id]);
+    }
+
+    console.log(resultImageWillDelete, "line 671");
+    //Delete Image
+    sql = `DELETE FROM product_image WHERE id = ?`;
+
+    for (let i = 0; i < resultImageWillDelete.length; i++) {
+      await conn.query(sql, resultImageWillDelete[i].id);
+      if (resultImageWillDelete[i].image) {
+        fs.unlinkSync("./public" + resultImageWillDelete[i].image);
+      }
+    }
+
+    // Insert posts_images
+    sql = `INSERT INTO product_image set ?`;
 
     for (let i = 0; i < imagearrpath.length; i++) {
       let insertDataImage = {
         image: imagearrpath[i],
         product_id,
       };
-      await conn.query(sql, insertDataImage);
+      await conn.query(sql, [insertDataImage]);
     }
 
     // insert into stock
@@ -686,12 +709,12 @@ const editProductService = async (
 
     //   let resultStock = await conn.query(sql, [quantity, haveStockExp[0].id]);
     // } else {
-    sql = `UPDATE stock SET quantity = ?, expired_at = FROM_UNIXTIME(?) WHERE stock.product_id = ?`;
-    let [resultStock] = await conn.query(sql, [
-      quantity,
-      expired_at,
-      product_id,
-    ]);
+    // sql = `UPDATE stock SET quantity = ?, expired_at = FROM_UNIXTIME(?) WHERE stock.product_id = ?`;
+    // let [resultStock] = await conn.query(sql, [
+    //   quantity,
+    //   expired_at,
+    //   product_id,
+    // ]);
     // }
 
     //insert into symptom
@@ -707,20 +730,14 @@ const editProductService = async (
         if (!same.length) {
           let symptom_id = haveSymptom[0].id;
           sql = `INSERT INTO symptom_product (symptom_id, product_id) VALUES (?,?)`;
-          let [resultSymptomProduct] = await conn.query(sql, [
-            symptom_id,
-            product_id,
-          ]);
+          await conn.query(sql, [symptom_id, product_id]);
         }
       } else {
         sql = `INSERT INTO symptom (name) VALUES (?)`;
         let [resultSymptomp] = await conn.query(sql, symptomArr[i]);
         let symptom_id = resultSymptomp.insertId;
         sql = `INSERT INTO symptom_product (symptom_id, product_id) VALUES (?,?)`;
-        let [resultSymptompProduct] = await conn.query(sql, [
-          symptom_id,
-          product_id,
-        ]);
+        await conn.query(sql, [symptom_id, product_id]);
       }
     }
 
@@ -736,20 +753,14 @@ const editProductService = async (
         if (!same.length) {
           let category_id = haveCategory[0].id;
           sql = `INSERT INTO category_product (category_id, product_id) VALUES (?,?)`;
-          let [resultCategoryProduct] = await conn.query(sql, [
-            category_id,
-            product_id,
-          ]);
+          await conn.query(sql, [category_id, product_id]);
         }
       } else {
         sql = `INSERT INTO category (name) VALUES (?)`;
         let [resultCategory] = await conn.query(sql, categoryArr[i]);
         let category_id = resultCategory.insertId;
         sql = `INSERT INTO category_product (category_id, product_id) VALUES (?,?)`;
-        let [resultCategoryProduct] = await conn.query(sql, [
-          category_id,
-          product_id,
-        ]);
+        await conn.query(sql, [category_id, product_id]);
       }
     }
 
