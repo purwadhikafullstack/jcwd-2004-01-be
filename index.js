@@ -7,7 +7,6 @@ const cors = require("cors");
 const { dbCon } = require("./src/connection");
 const multer = require("multer");
 
-//Morgan
 morgan.token("date", function (req, res) {
   return new Date().toString();
 });
@@ -18,7 +17,7 @@ app.use(
 //CORS
 app.use(
   cors({
-    exposedHeaders: ["x-total-count", "x-token-access"],
+    exposedHeaders: ["x-total-count", "x-token-access", "x-total-product"],
   })
 );
 
