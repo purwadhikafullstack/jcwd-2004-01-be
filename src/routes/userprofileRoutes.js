@@ -12,8 +12,13 @@ const {
   updateProfilePicture,
   deleteProfilePicture,
   getUpdatedUserprofileData,
+  getProvinces,
+  getCities,
+  addAddress,
+  updateDefaultAddress,
 } = userprofileController;
 const upload = require("../lib/upload");
+const { getAddress } = require("../controllers/userprofileController");
 
 const uploader = upload("/photos", "ProfilePicture").single("profile_picture");
 
@@ -31,5 +36,14 @@ Router.post(
 );
 Router.delete("/deleteprofilepicture", verifyTokenAccess, deleteProfilePicture);
 Router.get("/getuserprofile", verifyTokenAccess, getUpdatedUserprofileData);
+Router.get("/getprovince", getProvinces);
+Router.get("/getuseraddresses", verifyTokenAccess, getAddress);
+Router.get("/getcity/:province_id", getCities);
+Router.post("/addaddress", verifyTokenAccess, addAddress);
+Router.patch(
+  "/changedefaultaddress/:address_id",
+  verifyTokenAccess,
+  updateDefaultAddress
+);
 
 module.exports = Router;
