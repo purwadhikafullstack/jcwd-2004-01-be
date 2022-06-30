@@ -8,6 +8,7 @@ const {
   getAllProductService,
   getProductService,
   editProductService,
+  getProductTerkaitService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -222,6 +223,17 @@ const editProductController = async (req, res) => {
   }
 };
 
+const getProductTerkaitController = async (req, res) => {
+  try {
+    let result = await getProductTerkaitService(req.query);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -231,4 +243,5 @@ module.exports = {
   getAllProductController,
   getProductController,
   editProductController,
+  getProductTerkaitController,
 };

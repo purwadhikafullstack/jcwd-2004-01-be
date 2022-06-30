@@ -781,6 +781,50 @@ const editProductService = async (
   }
 };
 
+const getProductTerkaitService = async (props) => {
+  let conn, sql;
+  // const { sypmtom_id } = props;
+  let symptom_id = props.symptom_id;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    // dapet product_id dari symptom_id dulu
+    sql = `SELECT product_id FROM symptom_product WHERE symptom_id = ?`;
+    let [productIdResult] = await conn.query(sql, symptom_id);
+
+    console.log(productIdResult[0].product_id);
+
+    let data = [];
+    sql = `SELECT id, name, price, unit FROM product WHERE product.id = ? AND is_deleted ="NO" LIMIT 6`;
+    for (let i = 0; i < productIdResult.length; i++) {
+      const element = productIdResult[i];
+      let [result] = await conn.query(sql, element.product_id);
+      console.log(result, "ini result");
+      data[i] = result[0];
+    }
+
+    console.log(data);
+
+    sql = `SELECT image FROM product_image WHERE product_id = ? LIMIT 1`;
+    for (let i = 0; i < data.length; i++) {
+      const [resultImage] = await conn.query(sql, data[i].id);
+      data[i] = { ...data[i], imageProduct: resultImage[0].image };
+    }
+
+    conn.commit();
+    return data;
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -790,4 +834,5 @@ module.exports = {
   getAllProductService,
   getProductService,
   editProductService,
+  getProductTerkaitService,
 };
