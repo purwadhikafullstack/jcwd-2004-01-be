@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,5 +27,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd /root/jc-2004-final-project/2004-01/be
+            git pull origin main
+            git status
             npm install
             pm2 restart jc2004-01-be
