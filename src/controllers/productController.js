@@ -1,4 +1,5 @@
 const { dbCon } = require("../connection");
+const { connect } = require("../connection/finalprojectdb");
 const {
   inputProductService,
   getSymptomService,
@@ -8,6 +9,8 @@ const {
   getAllProductService,
   getProductService,
   editProductService,
+  getCategoryListService,
+  getHomeProductService,
   getProductTerkaitService,
   inputCartService,
 } = require("../services/productService");
@@ -224,6 +227,17 @@ const editProductController = async (req, res) => {
   }
 };
 
+// Get Category List
+const getCategoryList = async (req, res) => {
+  try {
+    const data = await getCategoryListService();
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 const getProductTerkaitController = async (req, res) => {
   try {
     let result = await getProductTerkaitService(req.query);
@@ -245,7 +259,50 @@ const inputCartController = async (req, res) => {
       .status(200)
       .send({ result, message: "Input Product to Cart Success!" });
   } catch (error) {
-    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+//Get Home Product
+// const getHomeProduct = async (req, res) => {
+//   const { category_id } = req.params;
+//   try {
+//     const data = await getHomeProductService(category_id);
+//     return res.status(200).send(data);
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(500).send({ message: error.message || error });
+//   }
+// };
+const getHomeProduct = async (req, res) => {
+  let {
+    search,
+    page,
+    limit,
+    category,
+    orderName,
+    orderPrice,
+    symptom,
+    type,
+    brand,
+  } = req.query;
+  // console.log(req.query);
+  // console.log(search, page, limit, category, orderName, orderPrice);
+  try {
+    const result = await getHomeProductService(
+      search,
+      page,
+      limit,
+      category,
+      orderName,
+      orderPrice,
+      symptom,
+      type,
+      brand
+    );
+
+    res.set("x-total-product", result.totalData[0].total_data);
+    return res.status(200).send(result.data);
+  } catch (error) {
     return res.status(500).send({ message: error.message || error });
   }
 };
@@ -259,6 +316,8 @@ module.exports = {
   getAllProductController,
   getProductController,
   editProductController,
+  getCategoryList,
+  getHomeProduct,
   getProductTerkaitController,
   inputCartController,
 };

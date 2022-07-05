@@ -400,12 +400,12 @@ const addAddressService = async (data, id) => {
     //   return { data: userAddress };
     // }
     console.log(userAddress);
-    conn.commit();
+    await conn.commit();
     conn.release();
     return { data: userAddress };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     conn.release;
     throw new Error(error.message || error);
   }
@@ -430,12 +430,12 @@ const updateDefaultAddressService = async (id, address_id) => {
     sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ? and is_default = "YES"`;
     let [defaultAddress1] = await conn.query(sql, id);
 
-    conn.commit();
+    await conn.commit();
     conn.release();
     return { data: defaultAddress1 };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }

@@ -9,6 +9,8 @@ const {
   getAllProductController,
   getProductController,
   editProductController,
+  getCategoryList,
+  getHomeProduct,
   getProductTerkaitController,
   inputCartController,
 } = require("../controllers/productController");
@@ -38,6 +40,8 @@ Router.patch(
   uploader,
   editProductController
 );
+Router.get("/get-category-list", getCategoryList);
+Router.get("/get-home-product", getHomeProduct);
 Router.get("/get-product-terkait", getProductTerkaitController);
 Router.post("/input-cart", verifyTokenAccess, inputCartController);
 
