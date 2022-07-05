@@ -1,4 +1,5 @@
 const { dbCon } = require("./../connection");
+const { uuidCode } = require("../helpers/UUID");
 const fs = require("fs");
 
 const inputCartService = async (id, product_id, quantity) => {
@@ -112,7 +113,6 @@ const updateQuantityService = async (currentQuantity, cart_id) => {
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
-    const { uuidCode } = require("../helpers/UUID");
   }
 };
 
