@@ -11,6 +11,7 @@ const {
   editProductService,
   getCategoryListService,
   getHomeProductService,
+  getProductTerkaitService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -236,6 +237,17 @@ const getCategoryList = async (req, res) => {
   }
 };
 
+const getProductTerkaitController = async (req, res) => {
+  try {
+    let result = await getProductTerkaitService(req.query);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 //Get Home Product
 // const getHomeProduct = async (req, res) => {
 //   const { category_id } = req.params;
@@ -292,4 +304,5 @@ module.exports = {
   editProductController,
   getCategoryList,
   getHomeProduct,
+  getProductTerkaitController,
 };

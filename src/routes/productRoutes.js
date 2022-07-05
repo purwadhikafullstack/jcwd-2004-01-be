@@ -11,6 +11,7 @@ const {
   editProductController,
   getCategoryList,
   getHomeProduct,
+  getProductTerkaitController,
 } = require("../controllers/productController");
 
 const upload = require("../lib/upload");
@@ -40,5 +41,6 @@ Router.patch(
 );
 Router.get("/get-category-list", getCategoryList);
 Router.get("/get-home-product", getHomeProduct);
+Router.get("/get-product-terkait", getProductTerkaitController);
 
 module.exports = Router;
