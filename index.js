@@ -34,14 +34,17 @@ app.get("/", (req, res) => {
   res.send("<h1>Healthymed API ready</h1>");
 });
 
-// Auth Routes
-const { authenticationRoutes, productRoutes } = require("./src/routes");
+// Routes
+const {
+  authenticationRoutes,
+  productRoutes,
+  userprofileRoutes,
+  transactionRoutes,
+} = require("./src/routes");
 app.use("/auth", authenticationRoutes);
 app.use("/product", productRoutes);
-
-//Userprofile Routes
-const { userprofileRoutes } = require("./src/routes");
 app.use("/profile", userprofileRoutes);
+app.use("/transaction", transactionRoutes);
 
 //LISTEN
 app.listen(PORT, () => console.log(`App running on PORT ${PORT}`));

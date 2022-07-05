@@ -237,7 +237,7 @@ const inputProductService = async (
     return { message: "Product Input Success" };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     if (imagearrpath) {
       // klo foto sudah terupload dan sql gaal maka fotonya dihapus
       for (let i = 0; i < imagearrpath.length; i++) {
@@ -259,7 +259,6 @@ const getCategoryService = async (req, res) => {
     sql = `SELECT name FROM category`;
     let [result] = await conn.query(sql);
 
-    conn.commit();
     return result;
   } catch (error) {
     throw new Error(error || "Network Error");
@@ -277,7 +276,6 @@ const getSymptomService = async () => {
     sql = `SELECT name FROM symptom`;
     let [result] = await conn.query(sql);
 
-    conn.commit();
     return result;
   } catch (error) {
     throw new Error(error || "Network Error");
@@ -295,7 +293,6 @@ const getTypeService = async (r) => {
     sql = `SELECT name FROM type`;
     let [result] = await conn.query(sql);
 
-    conn.commit();
     return result;
   } catch (error) {
     throw new Error(error || "Network Error");
@@ -405,6 +402,8 @@ const getAllProductService = async (
   try {
     conn = await dbCon.promise().getConnection();
 
+    await conn.beginTransaction();
+
     //get product for admin dashboard
     sql = `select product.id, name, original_price, price, unit, no_obat, no_bpom,
     (select sum(quantity) from stock where product_id = product.id) as total_stock from product
@@ -436,9 +435,10 @@ const getAllProductService = async (
 
     // res.set("x-total-product", totalData[0].total_data);
 
-    conn.commit();
+    await conn.commit();
     return { data, totalData };
   } catch (error) {
+    await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
@@ -452,6 +452,8 @@ const getProductService = async (id) => {
 
   try {
     conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
 
     //get product for admin dashboard
     sql = `select indication, composition, packaging,med_classification,need_receipt, storage_method, principal, nomor_ijin_edar, warning, description.usage, product.id, product.name, brand.name as brand, original_price, price, unit, no_obat, no_bpom, type.name as type_name,
@@ -495,14 +497,231 @@ const getProductService = async (id) => {
 
     console.log(data[0]);
 
-    conn.commit();
+    await conn.commit();
     return data[0];
   } catch (error) {
+    await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
   }
 };
+
+const getCategoryListService = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    //Get Category
+    sql = `select id, name from category`;
+    let [category] = await conn.query(sql);
+
+    //Get Symptom
+    sql = `select id, name from symptom`;
+    let [symptom] = await conn.query(sql);
+
+    //Get Type
+    sql = `select id, name from type`;
+    let [type] = await conn.query(sql);
+
+    //Get Brand
+    sql = `select id, name from brand`;
+    let [brand] = await conn.query(sql);
+
+    //Put everything in an object
+    let userData = {};
+    userData = { ...userData, category, symptom, type, brand };
+
+    conn.release;
+    return userData;
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+const getHomeProductService = async (
+  search,
+  page,
+  limit,
+  category,
+  orderName,
+  orderPrice,
+  symptom,
+  type,
+  brand
+) => {
+  let conn, sql;
+
+  console.log(
+    search,
+    page,
+    limit,
+    category,
+    orderName,
+    orderPrice,
+    "di service"
+  );
+
+  if (!category) {
+    category = ``;
+  } else {
+    category = `and category_name = "${category}"`;
+  }
+
+  if (symptom) {
+    // symptom = symptom.split(",").map((val) => parseInt(val));
+    symptom = `where symptom_id in (${dbCon.escape(symptom)})`;
+  } else {
+    symptom = ``;
+  }
+
+  if (type) {
+    type = `and type_id in (${type})`;
+  } else {
+    type = ``;
+  }
+
+  if (brand) {
+    brand = `and brand_id in (${brand})`;
+  } else {
+    brand = ``;
+  }
+
+  if (!page) {
+    page = 0;
+  }
+
+  if (!limit) {
+    limit = 10;
+  }
+
+  // if (!search) {
+  //   search = ``;
+  // } else {
+  //   search = `AND product.name LIKE '%${search}%'`;
+  // }
+
+  if (!orderName && !orderPrice) {
+    order = ``;
+  } else if (orderName && !orderPrice) {
+    order = `ORDER BY product.name ${orderName}`;
+  } else if (!orderName && orderPrice) {
+    order = `ORDER BY product.price ${orderPrice}`;
+  } else if (orderName && orderPrice) {
+    order = `ORDER BY product.name ${orderName}, product.price ${orderPrice}`;
+  }
+
+  // if (!orderPrice) {
+  //   orderPrice = ``;
+  // } else {
+  //   orderPrice = `ORDER BY poduct.price ${orderPrice}`;
+  // }
+
+  limit = parseInt(limit);
+
+  let offset = page * limit;
+
+  console.log(order);
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+    //get product for admin dashboard
+    sql = `select product.id, name, price, unit, type_name, brand_name, category_name, symptom_name,
+    (select sum(quantity) from stock where product_id = product.id) as total_stock from product
+    inner join category_product on product.id = category_product.product_id
+    inner join (select name as type_name, id from type) as type on product.type_id = type.id
+    inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
+    inner join (select symptom_id,product_id from symptom_product ${symptom}) as symptom_product on product.id = symptom_product.product_id
+    left join (select name as symptom_name, id from symptom) as symptom on symptom_id = symptom.id
+    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${type} ${brand} AND product.is_deleted = "NO"
+    group by product.id ${order} LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(
+      limit
+    )}`;
+
+    let [data] = await conn.query(sql);
+    console.log(data[0]);
+
+    //put category on data
+    sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
+
+    for (let i = 0; i < data.length; i++) {
+      const element = data[i];
+      let [categories] = await conn.query(sql, element.id);
+      data[i].categories = categories;
+    }
+
+    //put symptom
+    sql = `select id, name from symptom_product sp inner join symptom s on sp.symptom_id = s.id where product_id = ?`;
+
+    for (let i = 0; i < data.length; i++) {
+      const element = data[i];
+      let [symptom] = await conn.query(sql, element.id);
+      data[i].symptom = symptom;
+    }
+
+    //put image on data
+    sql = `select image from product_image where product_id = ?`;
+
+    for (let i = 0; i < data.length; i++) {
+      const element = data[i];
+      let [images] = await conn.query(sql, element.id);
+      data[i].images = images;
+    }
+
+    sql = `select count(*) as total_data from (select product.id, name, original_price, price, unit, no_obat, no_bpom,
+      (select sum(quantity) from stock where product_id = product.id) as total_stock from product
+      inner join category_product on product.id = category_product.product_id
+      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${search} AND product.is_deleted = "NO"
+      group by product.id) as table_data`;
+
+    let [totalData] = await conn.query(sql);
+
+    // res.set("x-total-product", totalData[0].total_data);
+
+    await conn.commit();
+    conn.release();
+    return { data, totalData };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+// async (category_id) => {
+//   let conn, sql;
+//   try {
+//     conn = await dbCon.promise().getConnection();
+
+//     //get product for admin dashboard
+//     sql = `select product.name, product.price, product.unit, category.name from category
+//     join category_product on category.id = category_product.category_id
+//     join product on product.id = category_product.product_id where category.id = ?`;
+
+//     let [data] = await conn.query(sql, category_id);
+
+//     //put image on data
+
+//     // sql = `select image from product_image where product_id = ?`;
+
+//     // const [resultImage] = await conn.query(sql, data[0].id);
+
+//     // data[0] = { ...data[0], imageProduct: resultImage };
+
+//     // console.log(data[0]);
+
+//     return data;
+//   } catch (error) {
+//     throw new Error(error.message || error);
+//   } finally {
+//     conn.release();
+//   }
+// };
 
 const editProductService = async (
   name,
@@ -768,7 +987,7 @@ const editProductService = async (
     return { message: "Product Updated!" };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await onn.rollback();
     if (imagearrpath) {
       // klo foto sudah terupload dan sql gaal maka fotonya dihapus
       for (let i = 0; i < imagearrpath.length; i++) {
@@ -790,4 +1009,6 @@ module.exports = {
   getAllProductService,
   getProductService,
   editProductService,
+  getCategoryListService,
+  getHomeProductService,
 };

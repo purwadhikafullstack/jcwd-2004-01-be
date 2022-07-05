@@ -67,7 +67,7 @@ const login = async (req, res) => {
     const tokenAccess = createJwtAccess(dataToken);
     res.set("x-token-access", tokenAccess);
     // console.log(tokenAccess);
-    return res.status(200).send(userData);
+    return res.status(200).send({ message: "Successfully logged in!" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
