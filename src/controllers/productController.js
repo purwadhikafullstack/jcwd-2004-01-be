@@ -9,6 +9,7 @@ const {
   getProductService,
   editProductService,
   getProductTerkaitService,
+  inputCartService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -234,6 +235,21 @@ const getProductTerkaitController = async (req, res) => {
   }
 };
 
+const inputCartController = async (req, res) => {
+  const { id } = req.user;
+  const { product_id, quantity } = req.body;
+  try {
+    let result = await inputCartService(id, product_id, quantity);
+
+    return res
+      .status(200)
+      .send({ result, message: "Input Product to Cart Success!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -244,4 +260,5 @@ module.exports = {
   getProductController,
   editProductController,
   getProductTerkaitController,
+  inputCartController,
 };

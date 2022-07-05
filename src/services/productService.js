@@ -825,6 +825,52 @@ const getProductTerkaitService = async (props) => {
   }
 };
 
+const inputCartService = async (id, product_id, quantity) => {
+  let conn, sql;
+  // const { product_id, quantity, id } = props;
+  console.log(product_id, "produk id", quantity, "quantity", id, "id");
+
+  if (!quantity) {
+    quantity = 1;
+  } else {
+    quantity = parseInt(quantity);
+  }
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?`;
+    let [haveProduct] = await conn.query(sql, [id, product_id]);
+
+    let result;
+    if (haveProduct.length) {
+      let cartId = haveProduct[0].id;
+      let currentQuantity = parseInt(haveProduct[0].quantity);
+      quantity = currentQuantity + quantity;
+      sql = `UPDATE cart SET quantity = ? WHERE id = ?`;
+      [result] = await conn.query(sql, [quantity, cartId]);
+    } else {
+      sql = `INSERT INTO cart SET ?`;
+      const dataProduct = {
+        user_id: id,
+        product_id,
+        quantity,
+      };
+      [result] = await conn.query(sql, dataProduct);
+    }
+
+    conn.commit();
+    return result[0];
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -835,4 +881,5 @@ module.exports = {
   getProductService,
   editProductService,
   getProductTerkaitService,
+  inputCartService,
 };

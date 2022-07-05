@@ -10,6 +10,7 @@ const {
   getProductController,
   editProductController,
   getProductTerkaitController,
+  inputCartController,
 } = require("../controllers/productController");
 
 const upload = require("../lib/upload");
@@ -38,5 +39,6 @@ Router.patch(
   editProductController
 );
 Router.get("/get-product-terkait", getProductTerkaitController);
+Router.post("/input-cart", verifyTokenAccess, inputCartController);
 
 module.exports = Router;

@@ -43,5 +43,9 @@ app.use("/product", productRoutes);
 const { userprofileRoutes } = require("./src/routes");
 app.use("/profile", userprofileRoutes);
 
+// Transaction Routes
+const { transactionRoutes } = require("./src/routes");
+app.use("/transaction", transactionRoutes);
+
 //LISTEN
 app.listen(PORT, () => console.log(`App running on PORT ${PORT}`));
