@@ -13,7 +13,7 @@ POST http://localhost:5000/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-    "username" : "radityaa",
+    "email" : "radityaaqil@gmail.com",
     "password" : "aaaaaaaaA1!"
 }
 
@@ -104,4 +104,75 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hb
 
 {
     
+}
+
+###
+
+GET http://localhost:5000/profile/getprovince HTTP/1.1
+Content-Type: application/json
+
+{
+
+}
+
+###
+
+GET http://localhost:5000/profile/getcity/12 HTTP/1.1
+Content-Type: application/json
+
+{
+
+}
+
+###
+
+POST http://localhost:5000/profile/addaddress HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwidGltZWNyZWF0ZWQiOjE2NTU5OTMyNjMzODIsImlhdCI6MTY1NTk5MzI2MywiZXhwIjoxNjU2MDE0ODYzfQ.gxW5a6hgwognPABF4k_75p5Tchpf6wNsAn-ss_WFa7Q
+
+{
+    "address" : "test1",
+    "province" : "test2",
+    "city" : "test2",
+    "recipient_number" : "test",
+    "recipient_name" : "test",
+    "address_label" : "test"
+}
+
+###
+
+PATCH http://localhost:5000/profile/changedefaultaddress/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU2MDQ0MjM1LCJleHAiOjE2NTYwNjU4MzV9.A3mFuQNjkb6GWefV56SRUk-nNI2t2U-66PiD94i9UsM
+
+{
+
+}
+
+###
+
+GET http://localhost:5000/profile/getuseraddresses HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU2MDQ0MjM1LCJleHAiOjE2NTYwNjU4MzV9.A3mFuQNjkb6GWefV56SRUk-nNI2t2U-66PiD94i9UsM
+
+{
+
+}
+
+###
+
+GET http://localhost:5000/product/get-category-list HTTP/1.1
+Content-Type: application/json
+
+{
+
+}
+
+###
+
+GET http://localhost:5000/product/get-home-product/5 HTTP/1.1
+Content-Type: application/json
+
+{
+
 }

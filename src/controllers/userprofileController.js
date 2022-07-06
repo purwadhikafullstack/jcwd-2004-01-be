@@ -9,6 +9,11 @@ const {
   updateProfilePictureService,
   deleteProfilePictureService,
   getUpdatedUserprofileDataService,
+  getProvincesService,
+  getCitiesService,
+  addAddressService,
+  updateDefaultAddressService,
+  getAddressService,
 } = userprofileService;
 
 //Update Username
@@ -122,6 +127,67 @@ const getUpdatedUserprofileData = async (req, res) => {
   }
 };
 
+//Get Provinces
+const getProvinces = async (req, res) => {
+  try {
+    const { data } = await getProvincesService();
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Get Cities
+const getCities = async (req, res) => {
+  const { province_id } = req.params;
+  try {
+    const { data } = await getCitiesService(province_id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Get user addresses
+const getAddress = async (req, res) => {
+  const { id } = req.user;
+  try {
+    const { data } = await getAddressService(id);
+    console.log(data);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Add address
+const addAddress = async (req, res) => {
+  const { id } = req.user;
+  try {
+    await addAddressService(req.body, id);
+    return res.status(200).send({ message: "berhasil add data" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Update default address
+const updateDefaultAddress = async (req, res) => {
+  const { id } = req.user;
+  const { address_id } = req.params;
+  try {
+    const { data } = await updateDefaultAddressService(id, address_id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   updateUsername,
   updatePhonenumber,
@@ -132,4 +198,9 @@ module.exports = {
   updateProfilePicture,
   deleteProfilePicture,
   getUpdatedUserprofileData,
+  getProvinces,
+  getCities,
+  addAddress,
+  updateDefaultAddress,
+  getAddress,
 };

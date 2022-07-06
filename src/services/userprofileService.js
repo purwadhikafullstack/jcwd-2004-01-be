@@ -273,9 +273,169 @@ const getUpdatedUserprofileDataService = async (id) => {
     sql = `select id, username, fullname, date_of_birth, profile_picture, gender, phonenumber, email from user where id = ?`;
     let [result] = await conn.query(sql, id);
     conn.release();
-    return { data: result };
+    return { data: result[0] };
   } catch (error) {
     console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Get Provinces Service
+const getProvincesService = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select name, id from province`;
+    let [provinces] = await conn.query(sql);
+
+    conn.release();
+    return { data: provinces };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Get Cities Service
+const getCitiesService = async (province_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select name, id from city where province_id = ?`;
+    let [cities] = await conn.query(sql, province_id);
+
+    conn.release();
+    return { data: cities };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Get User Address
+const getAddressService = async (id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select id, address, is_default, province_id, city_id, recipient_name, recipient_number, address_label from address where user_id = ? order by is_default asc`;
+    let [userAddress] = await conn.query(sql, id);
+
+    conn.release();
+    return { data: userAddress };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Add address
+const addAddressService = async (data, id) => {
+  const {
+    address,
+    province_id,
+    city_id,
+    recipient_number,
+    recipient_name,
+    address_label,
+  } = data;
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    // sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ?`;
+    // let [userAddress] = await conn.query(sql, id);
+
+    sql = `select id from address where address = ? and province_id = ? and city_id = ?`;
+    let [userAddress1] = await conn.query(sql, [address, province_id, city_id]);
+
+    if (userAddress1.length) {
+      throw "Please insert different address!";
+    }
+
+    // if (userAddress.length) {
+    //   for (let i = 0; i < userAddress.length; i++) {
+    //     const element = userAddress[i];
+    //     if (
+    //       element.address == address &&
+    //       element.city_id == city_id &&
+    //       element.province_id == province_id
+    //     ) {
+    //       throw "Please insert different address!";
+    //     }
+    //   }
+    // }
+    sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ?`;
+    let [userAddress] = await conn.query(sql, id);
+
+    let insertData = {
+      address: address,
+      province_id: province_id,
+      city_id: city_id,
+      recipient_number: recipient_number,
+      recipient_name: recipient_name,
+      address_label: address_label,
+      user_id: id,
+      is_default: userAddress.length ? "NO" : "YES",
+    };
+    sql = `insert into address set ?`;
+    await conn.query(sql, insertData);
+
+    // if (userAddress.length == 1) {
+    //   sql = `update address set ? where user_id = ?`;
+    //   await conn.query(sql, [{ is_default: "YES" }, id]);
+
+    //   sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ?`;
+    //   [userAddress] = await conn.query(sql, id);
+    //   conn.commit();
+    //   conn.release();
+    //   return { data: userAddress };
+    // }
+    console.log(userAddress);
+    await conn.commit();
+    conn.release();
+    return { data: userAddress };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release;
+    throw new Error(error.message || error);
+  }
+};
+
+//Update Default Address
+const updateDefaultAddressService = async (id, address_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `select id from address where user_id = ? and is_default = "YES"`;
+    let [defaultAddress] = await conn.query(sql, id);
+
+    sql = `update address set ? where id = ?`;
+    await conn.query(sql, [{ is_default: "NO" }, defaultAddress[0].id]);
+
+    sql = `update address set ? where id = ?`;
+    await conn.query(sql, [{ is_default: "YES" }, address_id]);
+
+    sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ? and is_default = "YES"`;
+    let [defaultAddress1] = await conn.query(sql, id);
+
+    await conn.commit();
+    conn.release();
+    return { data: defaultAddress1 };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }
@@ -291,4 +451,9 @@ module.exports = {
   updateProfilePictureService,
   deleteProfilePictureService,
   getUpdatedUserprofileDataService,
+  getProvincesService,
+  getCitiesService,
+  addAddressService,
+  updateDefaultAddressService,
+  getAddressService,
 };
