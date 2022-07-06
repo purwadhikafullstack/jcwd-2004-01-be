@@ -18,7 +18,10 @@ const {
   updateDefaultAddress,
 } = userprofileController;
 const upload = require("../lib/upload");
-const { getAddress } = require("../controllers/userprofileController");
+const {
+  getAddress,
+  getDefaultAddress,
+} = require("../controllers/userprofileController");
 
 const uploader = upload("/photos", "ProfilePicture").single("profile_picture");
 
@@ -45,5 +48,6 @@ Router.patch(
   verifyTokenAccess,
   updateDefaultAddress
 );
+Router.get("/get-default-address", verifyTokenAccess, getDefaultAddress);
 
 module.exports = Router;
