@@ -64,7 +64,7 @@ const loginService = async (data) => {
     conn = await dbCon.promise().getConnection();
 
     //Check user data
-    sql = `select * from user where (username = ? or email = ?)`;
+    sql = `select id, is_verified, role_id, email, fullname, password from user where (username = ? or email = ?)`;
     let [result] = await conn.query(sql, [username, email]);
     if (!result.length) {
       throw "User not found";
@@ -72,6 +72,8 @@ const loginService = async (data) => {
     if ((await comparePassword(password, result[0].password)) === false) {
       throw "Credential mismatch";
     }
+
+    delete result[0].password;
 
     conn.release();
 
