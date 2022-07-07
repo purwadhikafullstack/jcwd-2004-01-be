@@ -180,9 +180,33 @@ const uploadPrescriptionService = async (img, id) => {
   }
 };
 
+//get bank
+const getBankService = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //get bank
+    sql = `SELECT id, name, image FROM bank`;
+    let [resultBank] = await conn.query(sql);
+
+    await conn.commit();
+    return resultBank;
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputCartService,
   getCartService,
   updateQuantityService,
   uploadPrescriptionService,
+  getBankService,
 };

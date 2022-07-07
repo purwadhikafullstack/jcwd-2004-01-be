@@ -4,6 +4,7 @@ const {
   inputCartService,
   getCartService,
   updateQuantityService,
+  getBankService,
 } = transactionService;
 
 const inputCartController = async (req, res) => {
@@ -64,9 +65,21 @@ const uploadPrescription = async (req, res) => {
   }
 };
 
+//get bank
+const getBankController = async (req, res) => {
+  try {
+    const result = await getBankService();
+    return res.status(200).send({ result, message: "Get Bank Success!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputCartController,
   getCartController,
   updateQuantityController,
   uploadPrescription,
+  getBankController,
 };

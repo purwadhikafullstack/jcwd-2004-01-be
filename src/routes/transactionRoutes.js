@@ -7,6 +7,7 @@ const {
   inputCartController,
   getCartController,
   updateQuantityController,
+  getBankController,
 } = transactionController;
 const upload = require("../lib/upload");
 
@@ -25,5 +26,7 @@ Router.post(
   uploaderPrescription,
   uploadPrescription
 );
+
+Router.get("/get-bank", getBankController);
 
 module.exports = Router;
