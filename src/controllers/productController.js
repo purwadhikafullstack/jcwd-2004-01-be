@@ -13,6 +13,7 @@ const {
   getHomeProductService,
   getProductTerkaitService,
   inputCartService,
+  getPrescriptionProductService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -307,6 +308,16 @@ const getHomeProduct = async (req, res) => {
   }
 };
 
+//Get Prescription Product
+const getPrescriptionProduct = async (req, res) => {
+  try {
+    const data = await getPrescriptionProductService();
+    return res.status(200).send(data);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -320,4 +331,5 @@ module.exports = {
   getHomeProduct,
   getProductTerkaitController,
   inputCartController,
+  getPrescriptionProduct,
 };

@@ -335,6 +335,28 @@ const getAddressService = async (id) => {
   }
 };
 
+//Get User Address
+const getDefaultAddressService = async (id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `SELECT province.id, address, is_default, address.province_id, city_id, recipient_name, recipient_number, address_label, province.name as province, city.name as city
+    from address
+    LEFT JOIN province on address.province_id = province.id
+    LEFT JOIN city on address.city_id = city.id
+    where user_id = ? AND is_default = "YES"`;
+    let [userAddress] = await conn.query(sql, id);
+
+    conn.release();
+    return { data: userAddress };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
 //Add address
 const addAddressService = async (data, id) => {
   const {
@@ -456,4 +478,5 @@ module.exports = {
   addAddressService,
   updateDefaultAddressService,
   getAddressService,
+  getDefaultAddressService,
 };

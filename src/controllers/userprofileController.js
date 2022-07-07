@@ -14,6 +14,7 @@ const {
   addAddressService,
   updateDefaultAddressService,
   getAddressService,
+  getDefaultAddressService,
 } = userprofileService;
 
 //Update Username
@@ -163,6 +164,19 @@ const getAddress = async (req, res) => {
   }
 };
 
+//Get user addresses
+const getDefaultAddress = async (req, res) => {
+  const { id } = req.user;
+  try {
+    const { data } = await getDefaultAddressService(id);
+    console.log(data);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 //Add address
 const addAddress = async (req, res) => {
   const { id } = req.user;
@@ -203,4 +217,5 @@ module.exports = {
   addAddress,
   updateDefaultAddress,
   getAddress,
+  getDefaultAddress,
 };

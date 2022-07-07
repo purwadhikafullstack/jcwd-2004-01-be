@@ -1090,6 +1090,40 @@ const inputCartService = async (id, product_id, quantity) => {
   }
 };
 
+//Get Prescription Product
+const getPrescriptionProductService = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `select product.id, name, unit,
+    (select sum(quantity) from stock where product_id = product.id) as total_stock from product
+    inner join category_product on product.id = category_product.product_id
+    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where product.is_deleted = "NO"
+    group by product.id;`;
+    let [products] = await conn.query(sql);
+
+    //Put category on data
+    sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
+
+    for (let i = 0; i < products.length; i++) {
+      const element = products[i];
+      let [categories] = await conn.query(sql, element.id);
+      products[i].categories = categories;
+    }
+
+    await conn.commit();
+    conn.release();
+    return products;
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    conn.release();
+    throw new Error(error || "Network Error");
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -1103,4 +1137,5 @@ module.exports = {
   getHomeProductService,
   getProductTerkaitService,
   inputCartService,
+  getPrescriptionProductService,
 };

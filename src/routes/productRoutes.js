@@ -13,6 +13,7 @@ const {
   getHomeProduct,
   getProductTerkaitController,
   inputCartController,
+  getPrescriptionProduct,
 } = require("../controllers/productController");
 
 const upload = require("../lib/upload");
@@ -34,6 +35,7 @@ Router.get("/get-Type", getType);
 Router.patch("/delete-product", deleteProductController);
 Router.get("/get-all-product", getAllProductController);
 Router.get("/get-product", getProductController);
+Router.get("/get-prescription-product", getPrescriptionProduct);
 Router.patch(
   "/edit-product",
   verifyTokenAccess,
