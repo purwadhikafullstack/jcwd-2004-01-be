@@ -41,3 +41,8 @@
 // const { uuid } = require("./src/helpers/UUID");
 
 // console.log(uuid("HEY"));
+const dayjs = require("dayjs");
+
+const date = dayjs(new Date()).format("YYYYMMDD");
+
+console.log(date);

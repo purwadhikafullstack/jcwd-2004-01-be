@@ -1,6 +1,7 @@
 const { dbCon } = require("./../connection");
-const { uuidCode } = require("../helpers/UUID");
+const { uuidCode, codeGenerator } = require("../helpers/UUID");
 const fs = require("fs");
+const dayjs = require("dayjs");
 
 const inputCartService = async (id, product_id, quantity) => {
   let conn, sql;
@@ -139,10 +140,11 @@ const uploadPrescriptionService = async (img, id) => {
     let insertData = {
       user_id: id,
       address: userAddress[0].address,
-      status: 0,
+      status: 1,
       phone_number: userAddress[0].recipient_number,
       recipient: userAddress[0].recipient_name,
-      transaction_code: uuidCode("TRA"),
+      transaction_code: codeGenerator("TRA", id),
+      expired_at: dayjs(new Date()).add(2, "day").format("YYYY-MM-DD HH:mm:ss"),
     };
 
     sql = `insert into transaction set ?`;
@@ -156,8 +158,11 @@ const uploadPrescriptionService = async (img, id) => {
         img: val,
         transaction_id: userTransaction.insertId,
         user_id: id,
-        status: 0,
+        status: 3,
         prescription_code: uuidCode("PRS"),
+        expired_at: dayjs(new Date())
+          .add(2, "day")
+          .format("YYYY-MM-DD HH:mm:ss"),
       };
       await conn.query(sql, insertDataImage);
     }
@@ -180,9 +185,187 @@ const uploadPrescriptionService = async (img, id) => {
   }
 };
 
+//Get Prescription Transaction List
+const getPrescriptionTransactionListService = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    sql = `select * from transaction`;
+    let [prescriptionTransactionList] = await conn.query(sql);
+
+    //Add Prescription Image
+    sql = `select id, img, user_id from prescription where transaction_id = ?`;
+
+    for (let i = 0; i < prescriptionTransactionList.length; i++) {
+      const element = prescriptionTransactionList[i];
+      const [prescriptionImage] = await conn.query(sql, element.id);
+      console.log("ini prescriptionImage", prescriptionImage);
+      prescriptionTransactionList[i] = {
+        ...prescriptionTransactionList[i],
+        prescription: prescriptionImage,
+      };
+    }
+
+    //Add User_id Name
+    sql = `select fullname, username from user where id = ?`;
+
+    for (let i = 0; i < prescriptionTransactionList.length; i++) {
+      const element = prescriptionTransactionList[i];
+      const [prescriptionName] = await conn.query(sql, element.user_id);
+      console.log("ini prescriptionName", prescriptionName);
+      prescriptionTransactionList[i] = {
+        ...prescriptionTransactionList[i],
+        name: prescriptionName,
+      };
+    }
+
+    await conn.commit();
+    conn.release();
+    return prescriptionTransactionList;
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Accept Order
+const acceptOrderService = async (transaction_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    //Update status transaction
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ status: 7 }, transaction_id]);
+
+    //Update status prescription
+    sql = `update prescription set ? where transaction_id = ?`;
+    await conn.query(sql, [{ status: 1 }, transaction_id]);
+
+    conn.release();
+    return { message: "Order Accepted" };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Reject Order
+const rejectOrderService = async (transaction_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    //Update status transaction
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ status: 6 }, transaction_id]);
+
+    //Update status prescription
+    sql = `update prescription set ? where transaction_id = ?`;
+    await conn.query(sql, [{ status: 2 }, transaction_id]);
+
+    conn.release();
+    return { message: "Order Rejected" };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Submit Prescription Copy
+const submitPrescriptionCopyService = async (data, transaction_id) => {
+  let conn, sql;
+
+  const { prescription_values } = data;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    //Update Tabel Prescription
+    sql = `update prescription set ? where transaction_id = ?`;
+    let updatePrescription = {
+      physician_in_charge: prescription_values[0].physician_in_charge,
+      patient: prescription_values[0].patient,
+    };
+
+    await conn.query(sql, [updatePrescription, transaction_id]);
+
+    //Update Tabel Transaction
+    sql = `update transaction set ? where id = ?`;
+    let updateTransaction = {
+      status: 2,
+      expired_at: dayjs(new Date()).add(2, "day").format("YYYY-MM-DD HH:mm:ss"),
+    };
+
+    await conn.query(sql, [updateTransaction, transaction_id]);
+
+    //Insert Into Transaction Detail Table
+    //1. Add product images
+    for (let i = 0; i < prescription_values.length; i++) {
+      const element = prescription_values[i].id_obat;
+      sql = `select image, product_id from product_image where product_id = ?`;
+      let [productImage] = await conn.query(sql, element);
+      prescription_values[i] = {
+        ...prescription_values[i],
+        image: productImage[0],
+      };
+    }
+
+    //2. Add price
+    for (let i = 0; i < prescription_values.length; i++) {
+      const element = prescription_values[i].id_obat;
+      sql = `select price, id from product where id = ?`;
+      let [productPrice] = await conn.query(sql, element);
+      prescription_values[i] = {
+        ...prescription_values[i],
+        price: productPrice,
+      };
+    }
+
+    //Insert into transaction_detail with image
+    for (let i = 0; i < prescription_values.length; i++) {
+      const element = prescription_values[i];
+      let insertTransactionDetail = {
+        transaction_id: transaction_id,
+        name: element.drug_name,
+        quantity: element.quantity,
+        price: element.price[0].price,
+        image: element.image.image,
+      };
+      sql = `insert into transaction_detail set ?`;
+      await conn.query(sql, insertTransactionDetail);
+    }
+
+    sql = `select * from transaction_detail where transaction_id = ?`;
+    let [transactionDetail] = await conn.query(sql, transaction_id);
+
+    await conn.commit();
+    conn.release();
+    return transactionDetail;
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
 module.exports = {
   inputCartService,
   getCartService,
   updateQuantityService,
   uploadPrescriptionService,
+  getPrescriptionTransactionListService,
+  submitPrescriptionCopyService,
+  acceptOrderService,
+  rejectOrderService,
 };

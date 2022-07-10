@@ -119,7 +119,7 @@ const verifyAccountService = async (id) => {
     //Verify user
     sql = `update user set ? where id = ?`;
     let updateData = {
-      is_verified: 1,
+      is_verified: 2,
     };
     await conn.query(sql, [updateData, id]);
     sql = `select id,username,is_verified,email from user where id = ?`;

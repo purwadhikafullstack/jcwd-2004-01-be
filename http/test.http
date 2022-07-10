@@ -185,3 +185,21 @@ Content-Type: application/json
 {
     
 }
+
+###
+
+GET http://localhost:5000/transaction/get-transaction-prescription-list HTTP/1.1
+Content-Type: application/json
+
+{
+    
+}
+
+###
+
+POST http://localhost:5000/transaction/rejectorder/2 HTTP/1.1
+Content-Type: application/json
+
+{
+    
+}
