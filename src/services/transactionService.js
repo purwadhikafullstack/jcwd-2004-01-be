@@ -301,6 +301,7 @@ const checkoutService = async (data, id) => {
           activity: "TRANSACTION BY USER",
           quantity: x,
           stock_id: stockQuantity[j].id,
+          stock: balance,
         });
         quantity = parseInt(quantity) - parseInt(stockQuantity[j].quantity);
         if (quantity < 1) {
@@ -339,6 +340,13 @@ const checkoutService = async (data, id) => {
         image,
       };
       await conn.query(sql, dataTransactionDetail);
+    }
+
+    // delete cart
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      const element = checkoutProduct[i];
+      sql = `UPDATE cart SET is_deleted = 'YES' WHERE user_id = ? AND product_id = ?`;
+      await conn.query(sql, [id, element.product_id]);
     }
 
     await conn.commit();
