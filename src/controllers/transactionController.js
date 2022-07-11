@@ -135,14 +135,15 @@ const getFeeController = async (req, res) => {
 const checkoutController = async (req, res) => {
   // const { data } = req.body;
   // console.log(req.body, "req.body");
+  const { id } = req.user;
+  const { data } = req.body;
   try {
-    let response = checkoutService(req.body);
+    await checkoutService(data, id);
 
-    return res
-      .status(200)
-      .send({ data: response, message: "success Checkout!" });
+    return res.status(200).send({ message: "Success Checkout!" });
   } catch (error) {
-    return res.status(500).send(error);
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
   }
 };
 
@@ -160,6 +161,7 @@ const getPrescriptionTransactionList = async (req, res) => {
 //Submit Prescription Copy
 const submitPrescriptionCopy = async (req, res) => {
   const { transaction_id } = req.params;
+
   try {
     const { data } = await submitPrescriptionCopyService(
       req.body,

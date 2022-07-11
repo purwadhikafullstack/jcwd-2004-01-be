@@ -1,5 +1,4 @@
 const { dbCon } = require("./../connection");
-const { uuidCode } = require("../helpers/UUID");
 const { default: axios } = require("axios");
 const { uuidCode, codeGenerator } = require("../helpers/UUID");
 const fs = require("fs");
@@ -252,28 +251,13 @@ const getFeeService = async (cityId) => {
   }
 };
 
-const checkoutService = async (data) => {
+const checkoutService = async (data, id) => {
   let conn, sql;
   console.log(data, "ini data Service");
   const { checkoutProduct } = data;
+  console.log(data);
   console.log(checkoutProduct, "cekoutproduk");
-  // const data = {
-  //   // transaction
-  //   user_id,
-  //   status,
-  //   address,
-  //   phone_number,
-  //   recipient,
-  //   delivery_fee,
-  //   payment_slip,
-  //   transaction_code,
-  //   bank_id,
-  //   delivery_fee,
-  //   total_price,
-  //   expired_at,
-  // transaction detail
-  // data array of object, yang terdiri dari name, quantity, price, image
-  // };
+
   try {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
@@ -295,22 +279,71 @@ const checkoutService = async (data) => {
     }
 
     // kurangin stock
-
     for (let i = 0; i < checkoutProduct.length; i++) {
-      const element = checkoutProduct[i];
-      let quantityCurent = element.quantity;
-      // while () {
-      sql = `SELECT quantity FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
-      let [resultQuantity] = await conn.query(sql, element.product_id);
-      resultQuantity[0];
-      // }
+      let { product_id, quantity } = checkoutProduct[i];
+      sql = `SELECT quantity, id FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
+      let [stockQuantity] = await conn.query(sql, product_id);
+      console.log(stockQuantity[0], "stockQuantity");
+      for (let j = 0; j < stockQuantity.length; j++) {
+        let balance, x;
+        if (parseInt(stockQuantity[j].quantity) > parseInt(quantity)) {
+          balance = parseInt(stockQuantity[j].quantity) - parseInt(quantity);
+          x = quantity * -1;
+        } else {
+          balance = 0;
+          x = stockQuantity[j].quantity * -1;
+        }
+        sql = `update stock set ? where id = ?`;
+        await conn.query(sql, [{ quantity: balance }, stockQuantity[j].id]);
+
+        sql = `insert into log set ?`;
+        await conn.query(sql, {
+          activity: "TRANSACTION BY USER",
+          quantity: x,
+          stock_id: stockQuantity[j].id,
+        });
+        quantity = parseInt(quantity) - parseInt(stockQuantity[j].quantity);
+        if (quantity < 1) {
+          break;
+        }
+      }
     }
 
-    // let [resultQuantity] = conn.query(sql, );
+    //Input Into Tabel Transaction
+    sql = `INSERT INTO transaction SET ?`;
+    let updateTransaction = {
+      bank_id: data.bank_id,
+      status: 1,
+      user_id: id,
+      address: data.address,
+      phone_number: data.phone_number,
+      recipient: data.recipient,
+      delivery_fee: data.delivery_fee,
+      total_price: data.total_price,
+      transaction_code: codeGenerator("TRA", data.phone_number),
+      expired_at: dayjs(new Date()).add(1, "day").format("YYYY-MM-DD HH:mm:ss"),
+    };
+    let [resultTransaction] = await conn.query(sql, updateTransaction);
 
-    return {};
+    let transaction_id = resultTransaction.insertId;
+
+    //input into transaction detail
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      sql = `INSERT INTO transaction_detail SET ?`;
+      const { detail_product, quantity, image } = checkoutProduct[i];
+      let dataTransactionDetail = {
+        transaction_id,
+        name: detail_product.name,
+        quantity,
+        price: detail_product.price,
+        image,
+      };
+      await conn.query(sql, dataTransactionDetail);
+    }
+
+    await conn.commit();
   } catch (error) {
-    console.log(error.data);
+    console.log(error);
     await conn.rollback();
     throw new Error(error.message || error);
   } finally {
