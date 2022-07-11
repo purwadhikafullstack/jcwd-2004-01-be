@@ -193,7 +193,7 @@ const getPrescriptionTransactionListService = async () => {
 
     await conn.beginTransaction();
 
-    sql = `select * from transaction`;
+    sql = `select * from transaction order by id desc`;
     let [prescriptionTransactionList] = await conn.query(sql);
 
     //Add Prescription Image
@@ -280,7 +280,7 @@ const rejectOrderService = async (transaction_id) => {
 };
 
 //Submit Prescription Copy
-const submitPrescriptionCopyService = async (data, transaction_id) => {
+const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
   let conn, sql;
 
   const { prescription_values } = data;
@@ -289,6 +289,50 @@ const submitPrescriptionCopyService = async (data, transaction_id) => {
     conn = await dbCon.promise().getConnection();
 
     await conn.beginTransaction();
+
+    //Cek stock availability
+    for (let i = 0; i < prescription_values.length; i++) {
+      const element = prescription_values[i];
+      sql = `select sum(quantity) as total_quantity from stock where product_id = ?`;
+      let [stockQuantity] = await conn.query(sql, element.id_obat);
+      if (
+        parseInt(stockQuantity[0].total_quantity) < parseInt(element.quantity)
+      ) {
+        console.log(element, "ini element");
+        throw "There is a product in your cart gaada stokknyas "; //EDIT MESSAGE
+      }
+    }
+
+    //Decrease stock
+    for (let i = 0; i < prescription_values.length; i++) {
+      let { id_obat, quantity } = prescription_values[i];
+      sql = `select quantity, id from stock where product_id = ? and quantity > 0 order by expired_at`;
+      let [stockQuantity] = await conn.query(sql, id_obat);
+      for (let j = 0; j < stockQuantity.length; j++) {
+        let balance, x;
+        if (parseInt(stockQuantity[j].quantity) > parseInt(quantity)) {
+          balance = parseInt(stockQuantity[j].quantity) - parseInt(quantity);
+          x = quantity * -1;
+        } else {
+          balance = 0;
+          x = stockQuantity[j].quantity * -1;
+        }
+        sql = `update stock set ? where id = ?`;
+        await conn.query(sql, [{ quantity: balance }, stockQuantity[j].id]);
+
+        sql = `insert into log set ?`;
+        await conn.query(sql, {
+          user_id: user_id,
+          activity: "TRANSACTION BY PRESCRIPTION",
+          quantity: x,
+          stock_id: stockQuantity[j].id,
+        });
+        quantity = parseInt(quantity) - parseInt(stockQuantity[j].quantity);
+        if (quantity < 1) {
+          break;
+        }
+      }
+    }
 
     //Update Tabel Prescription
     sql = `update prescription set ? where transaction_id = ?`;
@@ -314,6 +358,7 @@ const submitPrescriptionCopyService = async (data, transaction_id) => {
       const element = prescription_values[i].id_obat;
       sql = `select image, product_id from product_image where product_id = ?`;
       let [productImage] = await conn.query(sql, element);
+      console.log(productImage, "ini product image");
       prescription_values[i] = {
         ...prescription_values[i],
         image: productImage[0],
