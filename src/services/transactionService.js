@@ -1,10 +1,10 @@
 const { dbCon } = require("./../connection");
 const { uuidCode } = require("../helpers/UUID");
+const { default: axios } = require("axios");
 const fs = require("fs");
 
 const inputCartService = async (id, product_id, quantity) => {
   let conn, sql;
-  // const { product_id, quantity, id } = props;
   console.log(product_id, "produk id", quantity, "quantity", id, "id");
 
   if (!quantity) {
@@ -56,7 +56,7 @@ const getCartService = async (id) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, product_id, quantity FROM cart WHERE user_id = ?`;
+    sql = `SELECT id, product_id, quantity FROM cart WHERE user_id = ? AND is_deleted ='NO'`;
     [data] = await conn.query(sql, user_id);
 
     sql = `SELECT image FROM product_image WHERE product_id = ? LIMIT 1`;
@@ -203,10 +203,119 @@ const getBankService = async () => {
   }
 };
 
+//delete cart
+const deleteCartService = async (id) => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //update is Deleted
+    sql = `UPDATE cart SET is_deleted = "YES" WHERE id = ?`;
+    await conn.query(sql, id);
+
+    await conn.commit();
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
+const getFeeService = async (cityId) => {
+  // the e-comm warehouse is in jakarta pusat, the id for jakarta pusat is 152
+  console.log(cityId);
+  try {
+    let response = await axios.post(
+      "https://api.rajaongkir.com/starter/cost",
+      { origin: "152", destination: cityId, weight: 1000, courier: "jne" },
+      {
+        headers: { key: "2aa8392bfd96d0b0af0f4f7db657cd8e" },
+      }
+    );
+
+    let deliveryFee =
+      response.data.rajaongkir.results[0].costs[0].cost[0].value;
+    return deliveryFee;
+  } catch (error) {
+    console.log(error.data);
+    throw new Error(error.message || error);
+  }
+};
+
+const checkoutService = async (data) => {
+  let conn, sql;
+  console.log(data, "ini data Service");
+  const { checkoutProduct } = data;
+  console.log(checkoutProduct, "cekoutproduk");
+  // const data = {
+  //   // transaction
+  //   user_id,
+  //   status,
+  //   address,
+  //   phone_number,
+  //   recipient,
+  //   delivery_fee,
+  //   payment_slip,
+  //   transaction_code,
+  //   bank_id,
+  //   delivery_fee,
+  //   total_price,
+  //   expired_at,
+  // transaction detail
+  // data array of object, yang terdiri dari name, quantity, price, image
+  // };
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //runtutan checkout
+    //1.check lagi count quantity stock product yang dibeli
+    //2.throw error kalo misal udah ga sanggup kasih quantity yang diminta
+    //3.kurangin quantity yang ada di stock dengan sejumlah yang di beli dengan tanggal kada luarsa lebih dulu.
+
+    // check for the last time if the quantity is enough or not.
+    sql = `SELECT SUM(quantity) total_product FROM stock WHERE product_id = ?`;
+
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      const element = checkoutProduct[i];
+      let [resultTotalQuantity] = await conn.query(sql, element.product_id);
+      if (resultTotalQuantity[0].total_product < element.quantity) {
+        throw "We're Sorry, the current product stock is not enough, please check back later.";
+      }
+    }
+
+    // kurangin stock
+
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      const element = checkoutProduct[i];
+      let quantityCurent = element.quantity;
+      // while () {
+      sql = `SELECT quantity FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
+      let [resultQuantity] = await conn.query(sql, element.product_id);
+      resultQuantity[0];
+      // }
+    }
+
+    // let [resultQuantity] = conn.query(sql, );
+
+    return {};
+  } catch (error) {
+    console.log(error.data);
+    throw new Error(error.message || error);
+  }
+};
+
 module.exports = {
   inputCartService,
   getCartService,
   updateQuantityService,
   uploadPrescriptionService,
   getBankService,
+  deleteCartService,
+  getFeeService,
+  checkoutService,
 };

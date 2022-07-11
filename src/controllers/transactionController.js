@@ -1,3 +1,4 @@
+const { getFeeService } = require("../services/transactionService");
 const { transactionService } = require("./../services");
 const {
   uploadPrescriptionService,
@@ -5,6 +6,8 @@ const {
   getCartService,
   updateQuantityService,
   getBankService,
+  deleteCartService,
+  checkoutService,
 } = transactionService;
 
 const inputCartController = async (req, res) => {
@@ -76,10 +79,53 @@ const getBankController = async (req, res) => {
   }
 };
 
+// delete Cart
+const deleteCartController = async (req, res) => {
+  const { id } = req.body;
+  try {
+    await deleteCartService(id);
+    return res.status(200).send({ message: "Cart Deleted!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// get delivery fee raja ongkir
+
+const getFeeController = async (req, res) => {
+  const { cityId } = req.query;
+  console.log(req.query, "hehu");
+  try {
+    let response = await getFeeService(cityId);
+    return res.status(200).send({ value: response });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+};
+
+const checkoutController = async (req, res) => {
+  // const { data } = req.body;
+  // console.log(req.body, "req.body");
+  try {
+    let response = checkoutService(req.body);
+
+    return res
+      .status(200)
+      .send({ data: response, message: "success Checkout!" });
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+};
+
 module.exports = {
   inputCartController,
   getCartController,
   updateQuantityController,
   uploadPrescription,
   getBankController,
+  deleteCartController,
+  getFeeController,
+  checkoutController,
 };

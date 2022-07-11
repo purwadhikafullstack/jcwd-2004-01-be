@@ -8,8 +8,11 @@ const {
   getCartController,
   updateQuantityController,
   getBankController,
+  deleteCartController,
+  checkoutController,
 } = transactionController;
 const upload = require("../lib/upload");
+const { getFeeController } = require("../controllers/transactionController");
 
 Router.post("/input-cart", verifyTokenAccess, inputCartController);
 Router.get("/get-cart", verifyTokenAccess, getCartController);
@@ -28,5 +31,8 @@ Router.post(
 );
 
 Router.get("/get-bank", getBankController);
+Router.patch("/delete-cart", deleteCartController);
+Router.get("/get-fee", getFeeController);
+Router.post("/checkout", verifyTokenAccess, checkoutController);
 
 module.exports = Router;
