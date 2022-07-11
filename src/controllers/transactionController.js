@@ -8,6 +8,10 @@ const {
   getBankService,
   deleteCartService,
   checkoutService,
+  getPrescriptionTransactionListService,
+  submitPrescriptionCopyService,
+  rejectOrderService,
+  acceptOrderService,
 } = transactionService;
 
 const inputCartController = async (req, res) => {
@@ -79,12 +83,35 @@ const getBankController = async (req, res) => {
   }
 };
 
+//Accept Order
+const acceptOrder = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    await acceptOrderService(transaction_id);
+    return res.status(200).send({ message: "Order Accepted" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 // delete Cart
 const deleteCartController = async (req, res) => {
   const { id } = req.body;
   try {
     await deleteCartService(id);
     return res.status(200).send({ message: "Cart Deleted!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+//Reject Order
+const rejectOrder = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    await rejectOrderService(transaction_id);
+    return res.status(200).send({ message: "Order Rejected" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -119,6 +146,32 @@ const checkoutController = async (req, res) => {
   }
 };
 
+//Get Prescription Transaction List
+const getPrescriptionTransactionList = async (req, res) => {
+  try {
+    const data = await getPrescriptionTransactionListService();
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Submit Prescription Copy
+const submitPrescriptionCopy = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    const { data } = await submitPrescriptionCopyService(
+      req.body,
+      transaction_id
+    );
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputCartController,
   getCartController,
@@ -128,4 +181,8 @@ module.exports = {
   deleteCartController,
   getFeeController,
   checkoutController,
+  getPrescriptionTransactionList,
+  submitPrescriptionCopy,
+  acceptOrder,
+  rejectOrder,
 };

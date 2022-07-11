@@ -10,6 +10,10 @@ const {
   getBankController,
   deleteCartController,
   checkoutController,
+  getPrescriptionTransactionList,
+  submitPrescriptionCopy,
+  acceptOrder,
+  rejectOrder,
 } = transactionController;
 const upload = require("../lib/upload");
 const { getFeeController } = require("../controllers/transactionController");
@@ -17,6 +21,10 @@ const { getFeeController } = require("../controllers/transactionController");
 Router.post("/input-cart", verifyTokenAccess, inputCartController);
 Router.get("/get-cart", verifyTokenAccess, getCartController);
 Router.post("/update-quantity", verifyTokenAccess, updateQuantityController);
+Router.get(
+  "/get-transaction-prescription-list",
+  getPrescriptionTransactionList
+);
 
 const uploaderPrescription = upload(
   "/prescription",
@@ -34,5 +42,8 @@ Router.get("/get-bank", getBankController);
 Router.patch("/delete-cart", deleteCartController);
 Router.get("/get-fee", getFeeController);
 Router.post("/checkout", verifyTokenAccess, checkoutController);
+Router.post("/submitprescription/:transaction_id", submitPrescriptionCopy);
+Router.post("/acceptorder/:transaction_id", acceptOrder);
+Router.post("/rejectorder/:transaction_id", rejectOrder);
 
 module.exports = Router;
