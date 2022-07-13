@@ -14,6 +14,8 @@ const {
   getProductTerkaitService,
   inputCartService,
   getPrescriptionProductService,
+  getQuantityProductService,
+  updateStockService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -318,6 +320,35 @@ const getPrescriptionProduct = async (req, res) => {
   }
 };
 
+// get quantityProduct
+const getQuantityProductController = async (req, res) => {
+  console.log(req.body, "reqbody");
+  try {
+    const result = await getQuantityProductService(req.body);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//update stock
+// const update
+
+const updateStockController = async (req, res) => {
+  const data = req.body;
+  const { id: user_id } = req.user;
+  console.log(data);
+  console.log(user_id);
+  try {
+    let result = await updateStockService(data, user_id);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -332,4 +363,6 @@ module.exports = {
   getProductTerkaitController,
   inputCartController,
   getPrescriptionProduct,
+  getQuantityProductController,
+  updateStockController,
 };

@@ -793,8 +793,6 @@ const editProductService = async (
       !warning ||
       !usage ||
       !brand_name ||
-      !quantity ||
-      !expired_at ||
       !type_name ||
       !symptom_name ||
       !category_name
@@ -1059,8 +1057,10 @@ const inputCartService = async (id, product_id, quantity) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?`;
+    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND is_deleted = 'NO'`;
     let [haveProduct] = await conn.query(sql, [id, product_id]);
+
+    console.log(haveProduct, "haveproduct");
 
     let result;
     if (haveProduct.length) {
@@ -1124,6 +1124,109 @@ const getPrescriptionProductService = async () => {
   }
 };
 
+const getQuantityProductService = async (dataInput) => {
+  let conn, sql;
+  console.log(dataInput, "ini data input");
+  const { expired_at, product_id } = dataInput;
+  console.log(expired_at, product_id);
+  try {
+    conn = await dbCon.promise().getConnection();
+    conn.beginTransaction();
+
+    sql = `SELECT quantity FROM stock WHERE product_id = ? AND expired_at = ?`;
+    let [resultQuantity] = await conn.query(sql, [product_id, expired_at]);
+    if (!resultQuantity.length) {
+      console.log("lewataku");
+      result = {
+        quantity: 0,
+      };
+      return { result, message: "Stock with the expired date not found." };
+    }
+
+    await conn.commit();
+    return {
+      result: resultQuantity[0],
+      message: "Get Quantity Product Success",
+    };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const updateStockService = async (data, user_id) => {
+  let conn, sql;
+
+  const { expired_at, quantity, product_id } = data;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    // 1. select stock where = tgl, kalo ada Update, kalo ga insert into
+    sql = `SELECT id, quantity FROM stock WHERE expired_at = ? AND product_id = ?`;
+    let [resultStock] = await conn.query(sql, [expired_at, product_id]);
+
+    if (!resultStock.length) {
+      sql = `INSERT INTO stock SET ?`;
+      console.log("lewat sini gan");
+      dataUpdate = {
+        quantity,
+        expired_at,
+        product_id,
+      };
+      let [resultInputStock] = await conn.query(sql, dataUpdate);
+
+      // 2. input log
+      sql = `INSERT INTO log SET ?`;
+      dataLog = {
+        activity: "UPDATE STOCK",
+        quantity: quantity,
+        stock_id: resultInputStock.insertId,
+        stock: quantity,
+        user_id,
+      };
+      await conn.query(sql, dataLog);
+
+      await conn.commit();
+      return { message: "Update Stock Success!" };
+    }
+    //update stock
+    sql = `UPDATE stock SET quantity = ? WHERE expired_at = ? AND product_id = ?`;
+    let [resultUpdate] = await conn.query(sql, [
+      quantity,
+      expired_at,
+      product_id,
+    ]);
+
+    let quantityBefore = resultStock[0].quantity;
+    let quantityLog = quantity - quantityBefore;
+
+    // 2. input log
+    sql = `INSERT INTO log SET ?`;
+    dataLog = {
+      activity: "UPDATE STOCK",
+      quantity: quantityLog,
+      stock_id: resultStock[0].id,
+      stock: quantity,
+      user_id,
+    };
+    await conn.query(sql, dataLog);
+
+    await conn.commit();
+    return { message: "Update Stock Success!" };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -1138,4 +1241,6 @@ module.exports = {
   getProductTerkaitService,
   inputCartService,
   getPrescriptionProductService,
+  updateStockService,
+  getQuantityProductService,
 };

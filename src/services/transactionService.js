@@ -18,8 +18,10 @@ const inputCartService = async (id, product_id, quantity) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?`;
+    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND is_deleted = 'NO'`;
     let [haveProduct] = await conn.query(sql, [id, product_id]);
+
+    console.log(haveProduct, "haveproduct WOOOOOOOOOOOOOOOO");
 
     let result;
     if (haveProduct.length) {
@@ -29,6 +31,7 @@ const inputCartService = async (id, product_id, quantity) => {
       sql = `UPDATE cart SET quantity = ? WHERE id = ?`;
       [result] = await conn.query(sql, [quantity, cartId]);
     } else {
+      console.log("ini masuk ke else");
       sql = `INSERT INTO cart SET ?`;
       const dataProduct = {
         user_id: id,
@@ -38,7 +41,7 @@ const inputCartService = async (id, product_id, quantity) => {
       [result] = await conn.query(sql, dataProduct);
     }
 
-    conn.commit();
+    await conn.commit();
     return result[0];
   } catch (error) {
     console.log(error);
@@ -281,6 +284,41 @@ const checkoutService = async (data, id) => {
     // kurangin stock
     for (let i = 0; i < checkoutProduct.length; i++) {
       let { product_id, quantity } = checkoutProduct[i];
+
+      //Input Into Tabel Transaction
+      sql = `INSERT INTO transaction SET ?`;
+      let updateTransaction = {
+        bank_id: data.bank_id,
+        status: 1,
+        user_id: id,
+        address: data.address,
+        phone_number: data.phone_number,
+        recipient: data.recipient,
+        delivery_fee: data.delivery_fee,
+        total_price: data.total_price,
+        transaction_code: codeGenerator("TRA", data.phone_number),
+        expired_at: dayjs(new Date())
+          .add(1, "day")
+          .format("YYYY-MM-DD HH:mm:ss"),
+      };
+      let [resultTransaction] = await conn.query(sql, updateTransaction);
+
+      let transaction_id = resultTransaction.insertId;
+
+      //input into transaction detail
+      for (let i = 0; i < checkoutProduct.length; i++) {
+        sql = `INSERT INTO transaction_detail SET ?`;
+        const { detail_product, quantity, image } = checkoutProduct[i];
+        let dataTransactionDetail = {
+          transaction_id,
+          name: detail_product.name,
+          quantity,
+          price: detail_product.price,
+          image,
+        };
+        await conn.query(sql, dataTransactionDetail);
+      }
+
       sql = `SELECT quantity, id FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
       let [stockQuantity] = await conn.query(sql, product_id);
       console.log(stockQuantity[0], "stockQuantity");
@@ -298,6 +336,7 @@ const checkoutService = async (data, id) => {
 
         sql = `insert into log set ?`;
         await conn.query(sql, {
+          transaction_id,
           activity: "TRANSACTION BY USER",
           quantity: x,
           stock_id: stockQuantity[j].id,
@@ -310,44 +349,33 @@ const checkoutService = async (data, id) => {
       }
     }
 
-    //Input Into Tabel Transaction
-    sql = `INSERT INTO transaction SET ?`;
-    let updateTransaction = {
-      bank_id: data.bank_id,
-      status: 1,
-      user_id: id,
-      address: data.address,
-      phone_number: data.phone_number,
-      recipient: data.recipient,
-      delivery_fee: data.delivery_fee,
-      total_price: data.total_price,
-      transaction_code: codeGenerator("TRA", data.phone_number),
-      expired_at: dayjs(new Date()).add(1, "day").format("YYYY-MM-DD HH:mm:ss"),
-    };
-    let [resultTransaction] = await conn.query(sql, updateTransaction);
-
-    let transaction_id = resultTransaction.insertId;
-
-    //input into transaction detail
-    for (let i = 0; i < checkoutProduct.length; i++) {
-      sql = `INSERT INTO transaction_detail SET ?`;
-      const { detail_product, quantity, image } = checkoutProduct[i];
-      let dataTransactionDetail = {
-        transaction_id,
-        name: detail_product.name,
-        quantity,
-        price: detail_product.price,
-        image,
-      };
-      await conn.query(sql, dataTransactionDetail);
-    }
-
     // delete cart
     for (let i = 0; i < checkoutProduct.length; i++) {
       const element = checkoutProduct[i];
       sql = `UPDATE cart SET is_deleted = 'YES' WHERE user_id = ? AND product_id = ?`;
       await conn.query(sql, [id, element.product_id]);
     }
+
+    await conn.commit();
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
+//reject transaction //bentar dah gan
+
+const rejectTransactionServic = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT `;
 
     await conn.commit();
   } catch (error) {
