@@ -14,6 +14,9 @@ const {
   getProductTerkaitController,
   inputCartController,
   getPrescriptionProduct,
+  getQuantityProductController,
+  updateStockController,
+  getLogController,
 } = require("../controllers/productController");
 
 const upload = require("../lib/upload");
@@ -46,5 +49,8 @@ Router.get("/get-category-list", getCategoryList);
 Router.get("/get-home-product", getHomeProduct);
 Router.get("/get-product-terkait", getProductTerkaitController);
 Router.post("/input-cart", verifyTokenAccess, inputCartController);
+Router.post("/get-quantity-product", getQuantityProductController);
+Router.post("/update-stock", verifyTokenAccess, updateStockController);
+Router.get("/get-log", getLogController);
 
 module.exports = Router;

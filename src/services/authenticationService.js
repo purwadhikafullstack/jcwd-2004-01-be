@@ -93,15 +93,14 @@ const keepLoginService = async (id) => {
     conn = await dbCon.promise().getConnection();
     sql = `select id, username, role_id, is_verified, fullname from user where id = ?`;
     let [result] = await conn.query(sql, [id]);
-    
 
-    conn.commit()
+    await conn.commit();
     return { data: result[0] };
   } catch (error) {
     console.log(error);
     throw new Error(error.message || error);
   } finally {
-    conn.release()
+    conn.release();
   }
 };
 

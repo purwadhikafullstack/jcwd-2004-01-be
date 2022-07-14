@@ -1,9 +1,13 @@
+const { getFeeService } = require("../services/transactionService");
 const { transactionService } = require("./../services");
 const {
   uploadPrescriptionService,
   inputCartService,
   getCartService,
   updateQuantityService,
+  getBankService,
+  deleteCartService,
+  checkoutService,
   getPrescriptionTransactionListService,
   submitPrescriptionCopyService,
   rejectOrderService,
@@ -70,6 +74,17 @@ const uploadPrescription = async (req, res) => {
   }
 };
 
+//get bank
+const getBankController = async (req, res) => {
+  try {
+    const result = await getBankService();
+    return res.status(200).send({ result, message: "Get Bank Success!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 //Accept Order
 const acceptOrder = async (req, res) => {
   const { transaction_id } = req.params;
@@ -82,12 +97,52 @@ const acceptOrder = async (req, res) => {
   }
 };
 
+// delete Cart
+const deleteCartController = async (req, res) => {
+  const { id } = req.body;
+  try {
+    await deleteCartService(id);
+    return res.status(200).send({ message: "Cart Deleted!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
 //Reject Order
 const rejectOrder = async (req, res) => {
   const { transaction_id } = req.params;
   try {
     await rejectOrderService(transaction_id);
     return res.status(200).send({ message: "Order Rejected" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+// get delivery fee raja ongkir
+
+const getFeeController = async (req, res) => {
+  const { cityId } = req.query;
+  console.log(req.query, "hehu");
+  try {
+    let response = await getFeeService(cityId);
+    return res.status(200).send({ value: response });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+};
+
+const checkoutController = async (req, res) => {
+  // const { data } = req.body;
+  // console.log(req.body, "req.body");
+  const { id } = req.user;
+  const { data } = req.body;
+  try {
+    await checkoutService(data, id);
+
+    return res.status(200).send({ message: "Success Checkout!" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -126,6 +181,7 @@ const getPrescriptionTransactionList = async (req, res) => {
 //Submit Prescription Copy
 const submitPrescriptionCopy = async (req, res) => {
   const { transaction_id } = req.params;
+
   try {
     const { data } = await submitPrescriptionCopyService(
       req.body,
@@ -188,6 +244,10 @@ module.exports = {
   getCartController,
   updateQuantityController,
   uploadPrescription,
+  getBankController,
+  deleteCartController,
+  getFeeController,
+  checkoutController,
   getPrescriptionTransactionList,
   submitPrescriptionCopy,
   acceptOrder,

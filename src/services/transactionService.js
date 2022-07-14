@@ -1,11 +1,11 @@
 const { dbCon } = require("./../connection");
+const { default: axios } = require("axios");
 const { uuidCode, codeGenerator } = require("../helpers/UUID");
 const fs = require("fs");
 const dayjs = require("dayjs");
 
 const inputCartService = async (id, product_id, quantity) => {
   let conn, sql;
-  // const { product_id, quantity, id } = props;
   console.log(product_id, "produk id", quantity, "quantity", id, "id");
 
   if (!quantity) {
@@ -18,8 +18,10 @@ const inputCartService = async (id, product_id, quantity) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?`;
+    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND is_deleted = 'NO'`;
     let [haveProduct] = await conn.query(sql, [id, product_id]);
+
+    console.log(haveProduct, "haveproduct WOOOOOOOOOOOOOOOO");
 
     let result;
     if (haveProduct.length) {
@@ -29,6 +31,7 @@ const inputCartService = async (id, product_id, quantity) => {
       sql = `UPDATE cart SET quantity = ? WHERE id = ?`;
       [result] = await conn.query(sql, [quantity, cartId]);
     } else {
+      console.log("ini masuk ke else");
       sql = `INSERT INTO cart SET ?`;
       const dataProduct = {
         user_id: id,
@@ -38,7 +41,7 @@ const inputCartService = async (id, product_id, quantity) => {
       [result] = await conn.query(sql, dataProduct);
     }
 
-    conn.commit();
+    await conn.commit();
     return result[0];
   } catch (error) {
     console.log(error);
@@ -57,7 +60,7 @@ const getCartService = async (id) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, product_id, quantity FROM cart WHERE user_id = ?`;
+    sql = `SELECT id, product_id, quantity FROM cart WHERE user_id = ? AND is_deleted ='NO'`;
     [data] = await conn.query(sql, user_id);
 
     sql = `SELECT image FROM product_image WHERE product_id = ? LIMIT 1`;
@@ -72,7 +75,7 @@ const getCartService = async (id) => {
       data[i] = { ...data[i], maxInput: quantityProdcut[0].total_stock };
     }
 
-    sql = `SELECT name, unit, price FROM product WHERE product.id = ?`;
+    sql = `SELECT name, unit, price, original_price FROM product WHERE product.id = ?`;
     for (let i = 0; i < data.length; i++) {
       let [resultProdcut] = await conn.query(sql, data[i].product_id);
       data[i] = { ...data[i], detail_product: resultProdcut[0] };
@@ -80,7 +83,7 @@ const getCartService = async (id) => {
 
     console.log(data);
 
-    conn.commit();
+    await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
@@ -106,7 +109,7 @@ const updateQuantityService = async (currentQuantity, cart_id) => {
     sql = `UPDATE cart SET quantity = ? WHERE id = ?`;
     let [quantityProduct] = await conn.query(sql, [currentQuantity, cart_id]);
 
-    conn.commit();
+    await conn.commit();
     return quantityProduct[0];
   } catch (error) {
     console.log(error);
@@ -182,6 +185,206 @@ const uploadPrescriptionService = async (img, id) => {
     await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
+  }
+};
+
+//get bank
+const getBankService = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //get bank
+    sql = `SELECT id, name, image FROM bank`;
+    let [resultBank] = await conn.query(sql);
+
+    await conn.commit();
+    return resultBank;
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
+//delete cart
+const deleteCartService = async (id) => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //update is Deleted
+    sql = `UPDATE cart SET is_deleted = "YES" WHERE id = ?`;
+    await conn.query(sql, id);
+
+    await conn.commit();
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
+const getFeeService = async (cityId) => {
+  // the e-comm warehouse is in jakarta pusat, the id for jakarta pusat is 152
+  console.log(cityId);
+  try {
+    let response = await axios.post(
+      "https://api.rajaongkir.com/starter/cost",
+      { origin: "152", destination: cityId, weight: 1000, courier: "jne" },
+      {
+        headers: { key: "2aa8392bfd96d0b0af0f4f7db657cd8e" },
+      }
+    );
+
+    let deliveryFee =
+      response.data.rajaongkir.results[0].costs[0].cost[0].value;
+    return deliveryFee;
+  } catch (error) {
+    console.log(error.data);
+    throw new Error(error.message || error);
+  }
+};
+
+const checkoutService = async (data, id) => {
+  let conn, sql;
+  console.log(data, "ini data Service");
+  const { checkoutProduct } = data;
+  console.log(data);
+  console.log(checkoutProduct, "cekoutproduk");
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    //runtutan checkout
+    //1.check lagi count quantity stock product yang dibeli
+    //2.throw error kalo misal udah ga sanggup kasih quantity yang diminta
+    //3.kurangin quantity yang ada di stock dengan sejumlah yang di beli dengan tanggal kada luarsa lebih dulu.
+
+    // check for the last time if the quantity is enough or not.
+    sql = `SELECT SUM(quantity) total_product FROM stock WHERE product_id = ?`;
+
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      const element = checkoutProduct[i];
+      let [resultTotalQuantity] = await conn.query(sql, element.product_id);
+      if (resultTotalQuantity[0].total_product < element.quantity) {
+        throw "We're Sorry, the current product stock is not enough, please check back later.";
+      }
+    }
+
+    // kurangin stock
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      let { product_id, quantity } = checkoutProduct[i];
+
+      //Input Into Tabel Transaction
+      sql = `INSERT INTO transaction SET ?`;
+      let updateTransaction = {
+        bank_id: data.bank_id,
+        status: 1,
+        user_id: id,
+        address: data.address,
+        phone_number: data.phone_number,
+        recipient: data.recipient,
+        delivery_fee: data.delivery_fee,
+        total_price: data.total_price,
+        transaction_code: codeGenerator("TRA", data.phone_number),
+        expired_at: dayjs(new Date())
+          .add(1, "day")
+          .format("YYYY-MM-DD HH:mm:ss"),
+      };
+      let [resultTransaction] = await conn.query(sql, updateTransaction);
+
+      let transaction_id = resultTransaction.insertId;
+
+      //input into transaction detail
+      for (let i = 0; i < checkoutProduct.length; i++) {
+        sql = `INSERT INTO transaction_detail SET ?`;
+        const { detail_product, quantity, image } = checkoutProduct[i];
+        let dataTransactionDetail = {
+          transaction_id,
+          name: detail_product.name,
+          quantity,
+          price: detail_product.price,
+          image,
+          original_price: detail_product.original_price,
+        };
+        await conn.query(sql, dataTransactionDetail);
+      }
+
+      sql = `SELECT quantity, id FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
+      let [stockQuantity] = await conn.query(sql, product_id);
+      console.log(stockQuantity[0], "stockQuantity");
+      for (let j = 0; j < stockQuantity.length; j++) {
+        let balance, x;
+        if (parseInt(stockQuantity[j].quantity) > parseInt(quantity)) {
+          balance = parseInt(stockQuantity[j].quantity) - parseInt(quantity);
+          x = quantity * -1;
+        } else {
+          balance = 0;
+          x = stockQuantity[j].quantity * -1;
+        }
+        sql = `update stock set ? where id = ?`;
+        await conn.query(sql, [{ quantity: balance }, stockQuantity[j].id]);
+
+        sql = `insert into log set ?`;
+        await conn.query(sql, {
+          transaction_id,
+          activity: "TRANSACTION BY USER",
+          quantity: x,
+          stock_id: stockQuantity[j].id,
+          stock: balance,
+        });
+        quantity = parseInt(quantity) - parseInt(stockQuantity[j].quantity);
+        if (quantity < 1) {
+          break;
+        }
+      }
+    }
+
+    // delete cart
+    for (let i = 0; i < checkoutProduct.length; i++) {
+      const element = checkoutProduct[i];
+      sql = `UPDATE cart SET is_deleted = 'YES' WHERE user_id = ? AND product_id = ?`;
+      await conn.query(sql, [id, element.product_id]);
+    }
+
+    await conn.commit();
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
+  }
+};
+
+//reject transaction //bentar dah gan
+
+const rejectTransactionServic = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT `;
+
+    await conn.commit();
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error.message || error);
+  } finally {
+    conn.release();
   }
 };
 
@@ -653,6 +856,10 @@ module.exports = {
   getCartService,
   updateQuantityService,
   uploadPrescriptionService,
+  getBankService,
+  deleteCartService,
+  getFeeService,
+  checkoutService,
   getPrescriptionTransactionListService,
   submitPrescriptionCopyService,
   acceptOrderService,
