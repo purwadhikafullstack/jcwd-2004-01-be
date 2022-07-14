@@ -75,7 +75,7 @@ const getCartService = async (id) => {
       data[i] = { ...data[i], maxInput: quantityProdcut[0].total_stock };
     }
 
-    sql = `SELECT name, unit, price FROM product WHERE product.id = ?`;
+    sql = `SELECT name, unit, price, original_price FROM product WHERE product.id = ?`;
     for (let i = 0; i < data.length; i++) {
       let [resultProdcut] = await conn.query(sql, data[i].product_id);
       data[i] = { ...data[i], detail_product: resultProdcut[0] };
@@ -315,6 +315,7 @@ const checkoutService = async (data, id) => {
           quantity,
           price: detail_product.price,
           image,
+          original_price: detail_product.original_price,
         };
         await conn.query(sql, dataTransactionDetail);
       }
