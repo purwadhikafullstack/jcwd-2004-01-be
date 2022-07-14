@@ -11,6 +11,8 @@ const {
   submitPrescriptionCopy,
   acceptOrder,
   rejectOrder,
+  getTransactionDetailProduct,
+  getTransactionListUser,
 } = transactionController;
 const upload = require("../lib/upload");
 
@@ -21,6 +23,7 @@ Router.get(
   "/get-transaction-prescription-list",
   getPrescriptionTransactionList
 );
+Router.get("/get-transaction-user-list", getTransactionListUser);
 
 const uploaderPrescription = upload(
   "/prescription",
@@ -37,5 +40,6 @@ Router.post(
 Router.post("/submitprescription/:transaction_id", submitPrescriptionCopy);
 Router.post("/acceptorder/:transaction_id", acceptOrder);
 Router.post("/rejectorder/:transaction_id", rejectOrder);
+Router.get("/transaction-detail/:transaction_id", getTransactionDetailProduct);
 
 module.exports = Router;

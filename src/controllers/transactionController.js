@@ -8,6 +8,8 @@ const {
   submitPrescriptionCopyService,
   rejectOrderService,
   acceptOrderService,
+  getTransactionDetailProductsService,
+  getTransactionListUserService,
 } = transactionService;
 
 const inputCartController = async (req, res) => {
@@ -94,9 +96,27 @@ const rejectOrder = async (req, res) => {
 
 //Get Prescription Transaction List
 const getPrescriptionTransactionList = async (req, res) => {
+  let {
+    search,
+    transaction_date_from,
+    transaction_date_end,
+    page,
+    limit,
+    orderDate,
+    orderPrice,
+  } = req.query;
   try {
-    const data = await getPrescriptionTransactionListService();
-    return res.status(200).send(data);
+    const data = await getPrescriptionTransactionListService(
+      search,
+      transaction_date_from,
+      transaction_date_end,
+      page,
+      limit,
+      orderDate,
+      orderPrice
+    );
+    res.set("x-total-product", data.totalData[0].total_data);
+    return res.status(200).send(data.prescriptionTransactionList);
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -118,6 +138,51 @@ const submitPrescriptionCopy = async (req, res) => {
   }
 };
 
+//Get Transaction Detail Product
+const getTransactionDetailProduct = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    const data = await getTransactionDetailProductsService(transaction_id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Get Transaction List User
+const getTransactionListUser = async (req, res) => {
+  let {
+    page,
+    limit,
+    menunggu,
+    diproses,
+    dikirim,
+    selesai,
+    dibatalkan,
+    orderByDate,
+  } = req.query;
+  try {
+    const data = await getTransactionListUserService(
+      page,
+      limit,
+      menunggu,
+      diproses,
+      dikirim,
+      selesai,
+      dibatalkan,
+      orderByDate
+    );
+    res.set("x-total-product", data.totalData[0].total_data);
+    // console.log(data.totalData[0].total_data);
+
+    return res.status(200).send(data.prescriptionTransactionList);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputCartController,
   getCartController,
@@ -127,4 +192,6 @@ module.exports = {
   submitPrescriptionCopy,
   acceptOrder,
   rejectOrder,
+  getTransactionDetailProduct,
+  getTransactionListUser,
 };
