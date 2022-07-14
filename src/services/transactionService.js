@@ -83,7 +83,7 @@ const getCartService = async (id) => {
 
     console.log(data);
 
-    conn.commit();
+    await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
@@ -109,7 +109,7 @@ const updateQuantityService = async (currentQuantity, cart_id) => {
     sql = `UPDATE cart SET quantity = ? WHERE id = ?`;
     let [quantityProduct] = await conn.query(sql, [currentQuantity, cart_id]);
 
-    conn.commit();
+    await conn.commit();
     return quantityProduct[0];
   } catch (error) {
     console.log(error);

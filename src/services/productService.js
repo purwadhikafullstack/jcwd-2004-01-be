@@ -1,5 +1,6 @@
 const { dbCon } = require("./../connection");
 const fs = require("fs");
+const dayjs = require("dayjs");
 
 const inputProductService = async (
   name,
@@ -1031,7 +1032,7 @@ const getProductTerkaitService = async (props) => {
       data[i] = { ...data[i], imageProduct: resultImage[0].image };
     }
 
-    conn.commit();
+    await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
@@ -1079,7 +1080,7 @@ const inputCartService = async (id, product_id, quantity) => {
       [result] = await conn.query(sql, dataProduct);
     }
 
-    conn.commit();
+    await conn.commit();
     return result[0];
   } catch (error) {
     console.log(error);
@@ -1227,6 +1228,125 @@ const updateStockService = async (data, user_id) => {
   }
 };
 
+const getLogService = async (
+  product_id,
+  year,
+  month,
+  activity,
+  page,
+  limit
+) => {
+  let sql, conn;
+  year = parseInt(year);
+  month = parseInt(month);
+
+  console.log(page, limit, activity, "page & limit");
+
+  // filter tahun bulan
+  if (!year && !month) {
+    console.log("lewat !year && !month");
+    year = ``;
+    month = ``;
+  } else if (year && !month) {
+    console.log("lewat year && !month");
+    year = `AND log.created_at >= '${year}-01-01' AND log.created_at <= '${year}-12-31'`;
+  } else if (year && month) {
+    year = `AND log.created_at >= '${year}-01-01' AND log.created_at <= '${year}-12-31' AND month(log.created_at) = ${month}`;
+  }
+
+  //filter activity
+  if (!activity) {
+    activity = ``;
+  } else {
+    activity = activity.replace(/_/g, " ");
+    activity = `AND activity = '${activity}'`;
+  }
+
+  if (!page) {
+    page = 0;
+  }
+
+  if (!limit) {
+    limit = 10;
+  }
+
+  limit = parseInt(limit);
+  let offset = parseInt(page) * parseInt(limit);
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT log.id, log.created_at, log.activity, user.fullname, log.quantity, log.stock, stock.expired_at FROM log
+    LEFT JOIN stock on log.stock_id = stock.id
+    LEFT JOIN product on stock.product_id = product.id
+    LEFT JOIN user on log.user_id = user.id
+    WHERE product_id = ?
+    ${year}
+    ${activity}
+    ORDER BY log.created_at DESC
+    LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(limit)}`;
+
+    let [result] = await conn.query(sql, product_id);
+    console.log(result, "ini result");
+    let mapedResult = result.map((val) => {
+      if (val.quantity < 0) {
+        return {
+          ...val,
+          created_at: dayjs(val.created_at).format("DD MMMM YYYY"),
+          expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
+          keluar: val.quantity * -1,
+          masuk: 0,
+        };
+      } else {
+        return {
+          ...val,
+          created_at: dayjs(val.created_at).format("DD MMMM YYYY"),
+          expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
+          keluar: 0,
+          masuk: val.quantity,
+        };
+      }
+    });
+
+    mapedResult.forEach((object) => {
+      delete object["quantity"];
+    });
+
+    // count product yang terfilter
+    sql = `select count(*) as total_data from (SELECT log.id, log.created_at, log.activity, user.fullname, log.quantity, log.stock, stock.expired_at FROM log
+    LEFT JOIN stock on log.stock_id = stock.id
+    LEFT JOIN product on stock.product_id = product.id
+    LEFT JOIN user on log.user_id = user.id
+    WHERE product_id = ?
+    ${year}
+    ${activity}) as table_data`;
+
+    let [totalData] = await conn.query(sql, product_id);
+
+    // count total stock yang ada
+    sql = `SELECT name, sum(quantity) total_quantity FROM stock
+    LEFT JOIN product ON stock.product_id = product.id
+    WHERE product.id = ?`;
+
+    let [totalStock] = await conn.query(sql, product_id);
+
+    await conn.commit();
+    return {
+      result: mapedResult,
+      totalData,
+      detailProduct: totalStock[0],
+      message: "Update Stock Success!",
+    };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -1243,4 +1363,5 @@ module.exports = {
   getPrescriptionProductService,
   updateStockService,
   getQuantityProductService,
+  getLogService,
 };

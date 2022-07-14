@@ -16,6 +16,7 @@ const {
   getPrescriptionProductService,
   getQuantityProductService,
   updateStockService,
+  getLogService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -349,6 +350,29 @@ const updateStockController = async (req, res) => {
   }
 };
 
+// get log
+const getLogController = async (req, res) => {
+  const { product_id, year, month, activity, page, limit } = req.query;
+  try {
+    let result = await getLogService(
+      product_id,
+      year,
+      month,
+      activity,
+      page,
+      limit
+    );
+
+    console.log(result);
+    res.set("x-total-product", result.totalData[0].total_data);
+
+    delete result.totalData;
+    return res.status(200).send(result);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -365,4 +389,5 @@ module.exports = {
   getPrescriptionProduct,
   getQuantityProductController,
   updateStockController,
+  getLogController,
 };
