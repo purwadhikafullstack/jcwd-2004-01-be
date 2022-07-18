@@ -1,6 +1,7 @@
 const { dbCon } = require("./../connection");
 const fs = require("fs");
 const dayjs = require("dayjs");
+const schedule = require("node-schedule");
 
 const inputProductService = async (
   name,
@@ -595,7 +596,7 @@ const getHomeProductService = async (
   }
 
   if (!limit) {
-    limit = 10;
+    limit = 12;
   }
 
   // if (!search) {
@@ -1098,7 +1099,7 @@ const getPrescriptionProductService = async () => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `select product.id, name, unit,
+    sql = `select product.id, name, unit, original_price,
     (select sum(quantity) from stock where product_id = product.id) as total_stock from product
     inner join category_product on product.id = category_product.product_id
     left join (select name as category_name, id from category) as kategori on category_id = kategori.id where product.is_deleted = "NO"
@@ -1346,6 +1347,54 @@ const getLogService = async (
     conn.release();
   }
 };
+
+//Delete Stock CRON
+const deleteStockCRON = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    sql = `select * from stock where expired_at = current_date() and quantity > 0`;
+    let [expiredStocks] = await conn.query(sql);
+
+    for (let i = 0; i < expiredStocks.length; i++) {
+      const element = expiredStocks[i];
+      //Delete Stock
+      sql = `update stock set ? where id = ?`;
+      let updateStock = {
+        quantity: 0,
+      };
+      await conn.query(sql, [updateStock, element.id]);
+      console.log(`kedelete yang ini-${element.id}`);
+
+      //Insert Into Log
+      sql = `insert into log set ?`;
+      let insertLog = {
+        activity: "CLEARED BY SYSTEM",
+        quantity: parseInt(element.quantity) * -1,
+        stock: 0,
+        stock_id: element.id,
+      };
+      await conn.query(sql, insertLog);
+      console.log(`diinput yang ini-${element.id}`);
+    }
+
+    await conn.commit();
+    conn.release();
+    return { message: "Deleted Automatically" };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+// schedule.scheduleJob("*/5 * * * * *", () => {
+//   deleteStockCRON();
+// });
 
 module.exports = {
   inputProductService,

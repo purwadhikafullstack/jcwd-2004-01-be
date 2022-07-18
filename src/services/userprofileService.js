@@ -326,6 +326,28 @@ const getAddressService = async (id) => {
     sql = `select id, address, is_default, province_id, city_id, recipient_name, recipient_number, address_label from address where user_id = ? order by is_default asc`;
     let [userAddress] = await conn.query(sql, id);
 
+    //Add City Name
+    for (let i = 0; i < userAddress.length; i++) {
+      const element = userAddress[i];
+      sql = `select name from city where id = ?`;
+      let [cityName] = await conn.query(sql, element.city_id);
+      userAddress[i] = {
+        ...userAddress[i],
+        city: cityName,
+      };
+    }
+
+    //Add Province Name
+    for (let i = 0; i < userAddress.length; i++) {
+      const element = userAddress[i];
+      sql = `select name from province where id = ?`;
+      let [provinceName] = await conn.query(sql, element.province_id);
+      userAddress[i] = {
+        ...userAddress[i],
+        province: provinceName,
+      };
+    }
+
     conn.release();
     return { data: userAddress };
   } catch (error) {

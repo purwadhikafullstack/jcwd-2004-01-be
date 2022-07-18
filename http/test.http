@@ -153,7 +153,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hb
 
 GET http://localhost:5000/profile/getuseraddresses HTTP/1.1
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwidXNlcm5hbWUiOiJyYWRpdHlhYXFpbCIsInJvbGVfaWQiOiJ1c2VyIiwiaWF0IjoxNjU2MDQ0MjM1LCJleHAiOjE2NTYwNjU4MzV9.A3mFuQNjkb6GWefV56SRUk-nNI2t2U-66PiD94i9UsM
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZV9pZCI6InVzZXIiLCJpYXQiOjE2NTgwNjYxMDEsImV4cCI6MTY1ODE1MjUwMX0.Kv6cQ4WGKXeQo1wAax0qBSyGemqk9uLglDoJfGJ97Ew
 
 {
 
@@ -224,8 +224,19 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:5000/transaction/get-transaction-user-list? HTTP/1.1
+GET http://localhost:5000/transaction/get-transaction-user-list HTTP/1.1
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZV9pZCI6InVzZXIiLCJpYXQiOjE2NTgwNDMyNjgsImV4cCI6MTY1ODEyOTY2OH0.LtSldW6L22WvMl0w6jka-IXQgE0EjDnMzjkpscXXgD0
+
+{
+    
+}
+
+###
+
+POST http://localhost:5000/transaction/rejectorder/20 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZV9pZCI6ImFkbWluIiwiaWF0IjoxNjU4MDQyNDkxLCJleHAiOjE2NTgxMjg4OTF9.AzQnm0WVrr7SmqbXynfKS0vL_2fJ6QROn6XxHYF8ZWA
 
 {
     
