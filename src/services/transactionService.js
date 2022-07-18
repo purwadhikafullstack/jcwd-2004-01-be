@@ -281,44 +281,37 @@ const checkoutService = async (data, id) => {
       }
     }
 
+    //Input Into Tabel Transaction
+    sql = `INSERT INTO transaction SET ?`;
+    let updateTransaction = {
+      bank_id: data.bank_id,
+      status: 2,
+      user_id: id,
+      address: data.address,
+      phone_number: data.phone_number,
+      recipient: data.recipient,
+      delivery_fee: data.delivery_fee,
+      total_price: data.total_price,
+      transaction_code: codeGenerator("TRA", data.phone_number),
+      expired_at: dayjs(new Date()).add(1, "day").format("YYYY-MM-DD HH:mm:ss"),
+    };
+    let [resultTransaction] = await conn.query(sql, updateTransaction);
+
+    let transaction_id = resultTransaction.insertId;
+
     // kurangin stock
     for (let i = 0; i < checkoutProduct.length; i++) {
-      let { product_id, quantity } = checkoutProduct[i];
-
-      //Input Into Tabel Transaction
-      sql = `INSERT INTO transaction SET ?`;
-      let updateTransaction = {
-        bank_id: data.bank_id,
-        status: 1,
-        user_id: id,
-        address: data.address,
-        phone_number: data.phone_number,
-        recipient: data.recipient,
-        delivery_fee: data.delivery_fee,
-        total_price: data.total_price,
-        transaction_code: codeGenerator("TRA", data.phone_number),
-        expired_at: dayjs(new Date())
-          .add(1, "day")
-          .format("YYYY-MM-DD HH:mm:ss"),
+      sql = `INSERT INTO transaction_detail SET ?`;
+      let { product_id, detail_product, quantity, image } = checkoutProduct[i];
+      let dataTransactionDetail = {
+        transaction_id,
+        name: detail_product.name,
+        quantity,
+        price: detail_product.price,
+        image,
+        original_price: detail_product.original_price,
       };
-      let [resultTransaction] = await conn.query(sql, updateTransaction);
-
-      let transaction_id = resultTransaction.insertId;
-
-      //input into transaction detail
-      for (let i = 0; i < checkoutProduct.length; i++) {
-        sql = `INSERT INTO transaction_detail SET ?`;
-        const { detail_product, quantity, image } = checkoutProduct[i];
-        let dataTransactionDetail = {
-          transaction_id,
-          name: detail_product.name,
-          quantity,
-          price: detail_product.price,
-          image,
-          original_price: detail_product.original_price,
-        };
-        await conn.query(sql, dataTransactionDetail);
-      }
+      await conn.query(sql, dataTransactionDetail);
 
       sql = `SELECT quantity, id FROM stock WHERE product_id = ? AND quantity > 0 order by stock.expired_at ASC`;
       let [stockQuantity] = await conn.query(sql, product_id);
