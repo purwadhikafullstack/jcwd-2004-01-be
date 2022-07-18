@@ -10,8 +10,14 @@ const {
   checkoutService,
   getPrescriptionTransactionListService,
   submitPrescriptionCopyService,
-  rejectOrderService,
+  rejectPrescriptionService,
   acceptOrderService,
+  getTransactionDetailProductsService,
+  getTransactionListUserService,
+  uploadSlipPaymentService,
+  rejectOrderService,
+  sendOrderService,
+  acceptOrderUserService,
 } = transactionService;
 
 const inputCartController = async (req, res) => {
@@ -107,10 +113,10 @@ const deleteCartController = async (req, res) => {
   }
 };
 //Reject Order
-const rejectOrder = async (req, res) => {
+const rejectPrescription = async (req, res) => {
   const { transaction_id } = req.params;
   try {
-    await rejectOrderService(transaction_id);
+    await rejectPrescriptionService(transaction_id);
     return res.status(200).send({ message: "Order Rejected" });
   } catch (error) {
     console.log(error);
@@ -149,9 +155,27 @@ const checkoutController = async (req, res) => {
 
 //Get Prescription Transaction List
 const getPrescriptionTransactionList = async (req, res) => {
+  let {
+    search,
+    transaction_date_from,
+    transaction_date_end,
+    page,
+    limit,
+    orderDate,
+    orderPrice,
+  } = req.query;
   try {
-    const data = await getPrescriptionTransactionListService();
-    return res.status(200).send(data);
+    const data = await getPrescriptionTransactionListService(
+      search,
+      transaction_date_from,
+      transaction_date_end,
+      page,
+      limit,
+      orderDate,
+      orderPrice
+    );
+    res.set("x-total-product", data.totalData[0].total_data);
+    return res.status(200).send(data.prescriptionTransactionList);
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -161,13 +185,117 @@ const getPrescriptionTransactionList = async (req, res) => {
 //Submit Prescription Copy
 const submitPrescriptionCopy = async (req, res) => {
   const { transaction_id } = req.params;
-
+  const { id } = req.user;
   try {
     const { data } = await submitPrescriptionCopyService(
       req.body,
+      transaction_id,
+      id
+    );
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Get Transaction Detail Product
+const getTransactionDetailProduct = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    const data = await getTransactionDetailProductsService(transaction_id);
+    return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Get Transaction List User
+const getTransactionListUser = async (req, res) => {
+  let {
+    page,
+    limit,
+    menunggu,
+    diproses,
+    dikirim,
+    selesai,
+    dibatalkan,
+    orderByDate,
+  } = req.query;
+  const { id } = req.user;
+  try {
+    const data = await getTransactionListUserService(
+      page,
+      limit,
+      menunggu,
+      diproses,
+      dikirim,
+      selesai,
+      dibatalkan,
+      orderByDate,
+      id
+    );
+    res.set("x-total-product", data.totalData[0].total_data);
+    // console.log(data.totalData[0].total_data);
+
+    return res.status(200).send(data.prescriptionTransactionList);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Upload Payment Slip
+const uploadSlipPayment = async (req, res) => {
+  const { transaction_id } = req.params;
+  const payment_slip = req.file;
+  console.log(req.file, "ini req.file");
+  try {
+    const { data } = await uploadSlipPaymentService(
+      payment_slip,
       transaction_id
     );
     return res.status(200).send(data);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Reject Order (restore stock)
+const rejectOrder = async (req, res) => {
+  const { transaction_id } = req.params;
+  const { id } = req.user;
+  try {
+    await rejectOrderService(transaction_id, id);
+    return res
+      .status(200)
+      .send({ message: "Transaction successfully rejected" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Send Order
+const sendOrder = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    await sendOrderService(transaction_id);
+    return res.status(200).send({ message: "Order sent" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+//Accept Order User
+const acceptOrderUser = async (req, res) => {
+  const { transaction_id } = req.params;
+  try {
+    await acceptOrderUserService(transaction_id);
+    return res.status(200).send({ message: "Order accepted" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ message: error.message || error });
@@ -186,5 +314,12 @@ module.exports = {
   getPrescriptionTransactionList,
   submitPrescriptionCopy,
   acceptOrder,
+  rejectPrescription,
+  getTransactionDetailProduct,
+  getTransactionListUser,
+  uploadSlipPayment,
   rejectOrder,
+  sendOrder,
+  acceptOrder,
+  acceptOrderUser,
 };

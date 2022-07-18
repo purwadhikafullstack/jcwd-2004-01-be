@@ -3,6 +3,7 @@ const { default: axios } = require("axios");
 const { uuidCode, codeGenerator } = require("../helpers/UUID");
 const fs = require("fs");
 const dayjs = require("dayjs");
+const schedule = require("node-schedule");
 
 const inputCartService = async (id, product_id, quantity) => {
   let conn, sql;
@@ -382,14 +383,68 @@ const rejectTransactionServic = async () => {
 };
 
 //Get Prescription Transaction List
-const getPrescriptionTransactionListService = async () => {
+const getPrescriptionTransactionListService = async (
+  search,
+  transaction_date_from,
+  transaction_date_end,
+  page,
+  limit,
+  orderDate,
+  orderPrice
+) => {
+  //Page
+
+  if (!limit) {
+    limit = 5;
+  } else {
+    limit = parseInt(limit);
+  }
+
+  if (!page) {
+    page = 0;
+  } else {
+    page = parseInt(page);
+  }
+
+  let offset = page * limit;
+
+  //Filter
+  if (!search) {
+    search = ``;
+  } else {
+    search = `AND transaction.transaction_code LIKE '%${search}%' or user.fullname LIKE '%${search}%' or user.username LIKE '%${search}%'`;
+    console.log(search);
+  }
+
+  let transaction_date;
+  if (!transaction_date_from) {
+    transaction_date = ``;
+  } else {
+    transaction_date = `AND transaction.created_at between '${transaction_date_from}' AND '${transaction_date_end}'`;
+  }
+
+  let order;
+  if (!orderDate && !orderPrice) {
+    order = `ORDER BY transaction.created_at desc`;
+  } else if (orderDate && !orderPrice) {
+    order = `ORDER BY transaction.created_at ${orderDate}`;
+  } else if (!orderDate && orderPrice) {
+    order = `ORDER BY transaction.total_price ${orderPrice}`;
+  } else if (orderDate && orderPrice) {
+    order = `ORDER BY transaction.created_at ${orderDate}, transaction.total_price ${orderPrice}`;
+  }
+
   let conn, sql;
+
   try {
     conn = await dbCon.promise().getConnection();
 
     await conn.beginTransaction();
 
-    sql = `select * from transaction order by id desc`;
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${transaction_date} ${search} ${order} LIMIT ${dbCon.escape(
+      offset
+    )}, ${dbCon.escape(limit)}`;
+
     let [prescriptionTransactionList] = await conn.query(sql);
 
     //Add Prescription Image
@@ -405,22 +460,39 @@ const getPrescriptionTransactionListService = async () => {
       };
     }
 
-    //Add User_id Name
-    sql = `select fullname, username from user where id = ?`;
-
+    //Add Transaction Detail
+    sql = `select id, name, quantity, price, image, dosage from transaction_detail where transaction_id = ?`;
     for (let i = 0; i < prescriptionTransactionList.length; i++) {
       const element = prescriptionTransactionList[i];
-      const [prescriptionName] = await conn.query(sql, element.user_id);
-      console.log("ini prescriptionName", prescriptionName);
+      const [orderedProduct] = await conn.query(sql, element.id);
+      console.log("ini ordered product", orderedProduct);
       prescriptionTransactionList[i] = {
         ...prescriptionTransactionList[i],
-        name: prescriptionName,
+        orderedProduct: orderedProduct,
       };
     }
 
+    //x-total-product
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${search} ${transaction_date}) as data_table`;
+
+    let [totalData] = await conn.query(sql);
+
+    //Add User_id Name
+    // sql = `select fullname, username from user where id = ?`;
+
+    // for (let i = 0; i < prescriptionTransactionList.length; i++) {
+    //   const element = prescriptionTransactionList[i];
+    //   const [prescriptionName] = await conn.query(sql, element.user_id);
+    //   console.log("ini prescriptionName", prescriptionName);
+    //   prescriptionTransactionList[i] = {
+    //     ...prescriptionTransactionList[i],
+    //     name: prescriptionName,
+    //   };
+    // }
+
     await conn.commit();
     conn.release();
-    return prescriptionTransactionList;
+    return { prescriptionTransactionList, totalData };
   } catch (error) {
     console.log(error);
     await conn.rollback();
@@ -437,11 +509,18 @@ const acceptOrderService = async (transaction_id) => {
 
     //Update status transaction
     sql = `update transaction set ? where id = ?`;
-    await conn.query(sql, [{ status: 7 }, transaction_id]);
+    await conn.query(sql, [{ status: 3 }, transaction_id]);
 
-    //Update status prescription
-    sql = `update prescription set ? where transaction_id = ?`;
-    await conn.query(sql, [{ status: 1 }, transaction_id]);
+    //Update prescription status if exist
+    sql = `select status from prescription where transaction_id = ?`;
+    let [prescriptionExist] = await conn.query(sql, transaction_id);
+
+    if (prescriptionExist.length > 0) {
+      for (let i = 0; i < prescriptionExist.length; i++) {
+        sql = `update prescription set ? where transaction_id = ?`;
+        await conn.query(sql, [{ status: 1 }, transaction_id]);
+      }
+    }
 
     conn.release();
     return { message: "Order Accepted" };
@@ -452,8 +531,46 @@ const acceptOrderService = async (transaction_id) => {
   }
 };
 
-//Reject Order
-const rejectOrderService = async (transaction_id) => {
+//Send Order Service
+const sendOrderService = async (transaction_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    // Update Transaction status
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ status: 4 }, transaction_id]);
+
+    conn.release();
+    return { message: "Order sent" };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Accept Order User
+const acceptOrderUserService = async (transaction_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    // Update Transaction status
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ status: 5 }, transaction_id]);
+
+    conn.release();
+    return { message: "Order accepted" };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Reject PRESCRIPTION
+const rejectPrescriptionService = async (transaction_id) => {
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
@@ -467,7 +584,7 @@ const rejectOrderService = async (transaction_id) => {
     await conn.query(sql, [{ status: 2 }, transaction_id]);
 
     conn.release();
-    return { message: "Order Rejected" };
+    return { message: "Prescription Rejected" };
   } catch (error) {
     console.log(error);
     conn.release();
@@ -475,8 +592,73 @@ const rejectOrderService = async (transaction_id) => {
   }
 };
 
+//Reject Transaction (RESTORE STOCK)
+const rejectOrderService = async (transaction_id, id) => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    //Select specific stock
+    sql = `select id, stock_id, quantity from log where transaction_id = ?`;
+    let [selectedStock] = await conn.query(sql, transaction_id);
+
+    //Update transaction status
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ status: 6 }, transaction_id]);
+
+    //Update prescription status if exist
+    sql = `select * from prescription where transaction_id = ?`;
+    let [prescriptionExist] = await conn.query(sql, transaction_id);
+
+    if (prescriptionExist.length > 0) {
+      for (let i = 0; i < prescriptionExist.length; i++) {
+        sql = `update prescription set ? where transaction_id = ?`;
+        await conn.query(sql, [{ status: 2 }, transaction_id]);
+      }
+    }
+
+    //Cycle through the array and restore the balance of the universe
+    for (let i = 0; i < selectedStock.length; i++) {
+      let element = selectedStock[i];
+      sql = `select id, quantity from stock where id = ?`;
+      let [restoredStock] = await conn.query(sql, element.stock_id);
+      let restoredValue =
+        Math.abs(parseInt(element.quantity)) +
+        parseInt(restoredStock[0].quantity);
+
+      let updateQuantityStock = {
+        quantity: restoredValue,
+      };
+      sql = `update stock set ? where id = ?`;
+      await conn.query(sql, [updateQuantityStock, restoredStock[0].id]);
+
+      let insertDataLog = {
+        activity: "REJECTED ORDER",
+        quantity: `+${Math.abs(parseInt(element.quantity))}`,
+        stock_id: element.stock_id,
+        transaction_id: transaction_id,
+        user_id: id,
+        stock: restoredValue,
+      };
+      sql = `insert into log set ?`;
+      await conn.query(sql, insertDataLog);
+    }
+
+    await conn.commit();
+    conn.release();
+    return { message: "Transaction successfully rejected" };
+  } catch (error) {
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
 //Submit Prescription Copy
-const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
+const submitPrescriptionCopyService = async (data, transaction_id, id) => {
   let conn, sql;
 
   const { prescription_values } = data;
@@ -495,7 +677,7 @@ const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
         parseInt(stockQuantity[0].total_quantity) < parseInt(element.quantity)
       ) {
         console.log(element, "ini element");
-        throw "There is a product in your cart gaada stokknyas "; //EDIT MESSAGE
+        throw "A product stok is depleted"; //EDIT MESSAGE
       }
     }
 
@@ -518,10 +700,12 @@ const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
 
         sql = `insert into log set ?`;
         await conn.query(sql, {
-          user_id: user_id,
+          user_id: id,
           activity: "TRANSACTION BY PRESCRIPTION",
           quantity: x,
           stock_id: stockQuantity[j].id,
+          transaction_id: transaction_id,
+          stock: balance,
         });
         quantity = parseInt(quantity) - parseInt(stockQuantity[j].quantity);
         if (quantity < 1) {
@@ -581,10 +765,28 @@ const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
         quantity: element.quantity,
         price: element.price[0].price,
         image: element.image.image,
+        dosage: element.dosage,
+        original_price: element.original_price,
       };
       sql = `insert into transaction_detail set ?`;
       await conn.query(sql, insertTransactionDetail);
     }
+
+    //Sum Price and insert into transaction
+    // sql = `select price, quantity from transaction_detail where transaction_id = ?`;
+    // let [priceQuantity] = await conn.query(sql, transaction_id);
+
+    //Insert total_price into transaction
+    let multiplication = 0;
+    for (let i = 0; i < prescription_values.length; i++) {
+      const element = prescription_values[i];
+      multiplication +=
+        parseInt(element.quantity) * parseInt(element.price[0].price);
+    }
+    console.log(multiplication, "ini sum mul");
+
+    sql = `update transaction set ? where id = ?`;
+    await conn.query(sql, [{ total_price: multiplication }, transaction_id]);
 
     sql = `select * from transaction_detail where transaction_id = ?`;
     let [transactionDetail] = await conn.query(sql, transaction_id);
@@ -600,6 +802,298 @@ const submitPrescriptionCopyService = async (data, transaction_id, user_id) => {
   }
 };
 
+//Get Transaction Detail Products (CARD TRANSACTION)
+const getTransactionDetailProductsService = async (transaction_id) => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select id, name, quantity, price, image, dosage from transaction_detail where transaction_id = ?`;
+    let [products] = await conn.query(sql, transaction_id);
+
+    conn.release();
+    return products;
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Get Transaction List USER
+const getTransactionListUserService = async (
+  page,
+  limit,
+  menunggu,
+  diproses,
+  dikirim,
+  selesai,
+  dibatalkan,
+  orderByDate,
+  id
+) => {
+  if (!menunggu) {
+    menunggu = ``;
+  } else {
+    menunggu = `AND status in ('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN', 'MENUNGGU_KONFIRMASI_PEMBAYARAN')`;
+  }
+
+  if (!diproses) {
+    diproses = ``;
+  } else {
+    diproses = `AND status = 'DIPROSES'`;
+  }
+
+  if (!dikirim) {
+    dikirim = ``;
+  } else {
+    dikirim = `AND status = 'DIKIRIM'`;
+  }
+
+  if (!selesai) {
+    selesai = ``;
+  } else {
+    selesai = `AND status = 'SELESAI'`;
+  }
+
+  if (!dibatalkan) {
+    dibatalkan = ``;
+  } else {
+    dibatalkan = `AND status = 'DITOLAK'`;
+  }
+
+  let order;
+  if (!orderByDate) {
+    order = `ORDER BY transaction.created_at desc`;
+  } else {
+    order = `ORDER BY transaction.created_at asc`;
+  }
+
+  // if (!prescription) {
+  //   prescription = ``;
+  // } else {
+  //   prescription = `where prescription is not null`;
+  // }
+
+  // if (!non_prescription) {
+  //   non_prescription = ``;
+  // } else {
+  //   non_prescription = `where prescription is null`;
+  // }
+
+  if (!limit) {
+    limit = 5;
+  } else {
+    limit = parseInt(limit);
+  }
+
+  if (!page) {
+    page = 0;
+  } else {
+    page = parseInt(page);
+  }
+
+  let offset = page * limit;
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${order} LIMIT ${dbCon.escape(
+      offset
+    )}, ${dbCon.escape(limit)}`;
+
+    let [prescriptionTransactionList] = await conn.query(sql, id);
+
+    //Add Prescription Image
+    sql = `select id, img, user_id, prescription_code from prescription where transaction_id = ?`;
+
+    for (let i = 0; i < prescriptionTransactionList.length; i++) {
+      const element = prescriptionTransactionList[i];
+      const [prescriptionImage] = await conn.query(sql, element.id);
+      // console.log("ini prescriptionImage", prescriptionImage);
+      prescriptionTransactionList[i] = {
+        ...prescriptionTransactionList[i],
+        prescription: prescriptionImage,
+      };
+    }
+
+    //Add Transaction Detail
+    sql = `select id, name, quantity, price, image, dosage from transaction_detail where transaction_id = ?`;
+    for (let i = 0; i < prescriptionTransactionList.length; i++) {
+      const element = prescriptionTransactionList[i];
+      const [orderedProduct] = await conn.query(sql, element.id);
+      // console.log("ini ordered product", orderedProduct);
+      prescriptionTransactionList[i] = {
+        ...prescriptionTransactionList[i],
+        orderedProduct: orderedProduct,
+      };
+    }
+
+    //x-total-product
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan}) as data_table`;
+
+    let [totalData] = await conn.query(sql);
+
+    await conn.commit();
+    conn.release();
+    return { prescriptionTransactionList, totalData };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Upload Bukti Pembayaran
+const uploadSlipPaymentService = async (payment_slip, transaction_id) => {
+  let path = "/paymentslip";
+  const imagePath = payment_slip ? `${path}/${payment_slip.filename}` : null;
+  console.log(payment_slip, "ini payment_slip");
+
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `update transaction set ? where id = ?`;
+    let updateData = {
+      payment_slip: imagePath,
+      status: 8,
+    };
+    await conn.query(sql, [updateData, transaction_id]);
+
+    sql = `select payment_slip from transaction where id = ?`;
+    let [result] = await conn.query(sql, transaction_id);
+    console.log(result, "ini payment_slip uploaded");
+
+    conn.release();
+    return { data: result[0] };
+  } catch (error) {
+    console.log(error);
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+//Test Node-Schedule
+// const testNodeSchedule = async () => {
+//   let conn, sql;
+//   try {
+//     conn = await dbCon.promise().getConnection();
+
+//     sql = `select * from transaction where expired_at <= current_timestamp() and status != 'DITOLAK'`;
+//     let [transactionData] = await conn.query(sql);
+
+//     if (transactionData.length > 0) {
+//       for (let i = 0; i < transactionData.length; i++) {
+//         const element = transactionData[i];
+//         sql = `update transaction set ? where id = ?`;
+//         await conn.query(sql, [{ status: 6 }, element.id]);
+//         console.log(`Ke update bos yang ini -${element.id}`);
+//       }
+//     }
+
+//     console.log("gaada yg diupdate bos");
+//     conn.release();
+//     return { message: "Updated" };
+//   } catch (error) {
+//     console.log(error);
+//     conn.release();
+//     throw new Error(error.message || error);
+//   }
+// };
+
+// schedule.scheduleJob("* * * * *", () => {
+//   testNodeSchedule();
+// });
+
+//Reject Transaction (RESTORE STOCK) / AUTOMATED
+const rejectOrderServiceCRON = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    //Select expired transaction
+    sql = `select * from transaction where expired_at <= current_timestamp() and status not in ('DITOLAK', 'DIPROSES', 'DIKIRIM', 'SELESAI')`;
+    let [transactionData] = await conn.query(sql);
+
+    if (transactionData.length > 0) {
+      for (let i = 0; i < transactionData.length; i++) {
+        const element = transactionData[i];
+
+        //Select specific stock from log
+        sql = `select id, stock_id, quantity from log where transaction_id = ?`;
+        let [selectedStock] = await conn.query(sql, element.id);
+
+        //Cycle through the array and restore the balance of the universe
+        for (let j = 0; j < selectedStock.length; j++) {
+          sql = `select id, quantity from stock where id = ?`;
+          let [restoredStock] = await conn.query(
+            sql,
+            selectedStock[j].stock_id
+          );
+          let restoredValue =
+            Math.abs(parseInt(selectedStock[j].quantity)) +
+            parseInt(restoredStock[0].quantity);
+
+          let updateQuantityStock = {
+            quantity: restoredValue,
+          };
+          sql = `update stock set ? where id = ?`;
+          await conn.query(sql, [
+            updateQuantityStock,
+            selectedStock[j].stock_id,
+          ]);
+
+          let insertDataLog = {
+            activity: "REJECTED ORDER BY SYSTEM",
+            quantity: `+${Math.abs(parseInt(selectedStock[j].quantity))}`,
+            stock_id: selectedStock[j].stock_id,
+            transaction_id: element.id,
+            stock: restoredValue,
+          };
+          sql = `insert into log set ?`;
+          await conn.query(sql, insertDataLog);
+        }
+
+        sql = `update transaction set ? where id = ?`;
+        await conn.query(sql, [{ status: 6 }, element.id]);
+        console.log(`Ke update bos yang ini -${element.id}`);
+
+        //Update prescription status if exist
+        sql = `select * from prescription where transaction_id = ?`;
+        let [prescriptionExist] = await conn.query(sql, element.id);
+
+        if (prescriptionExist.length > 0) {
+          for (let k = 0; k < prescriptionExist.length; k++) {
+            sql = `update prescription set ? where transaction_id = ?`;
+            await conn.query(sql, [{ status: 2 }, element.id]);
+            console.log(`resep ke-${prescriptionExist[k].id} ke update jg bos`);
+          }
+        }
+      }
+    }
+
+    await conn.commit();
+    conn.release();
+    return { message: "Transaction successfully rejected by system" };
+  } catch (error) {
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+// schedule.scheduleJob("* * * * *", () => {
+//   rejectOrderServiceCRON();
+// });
+
 module.exports = {
   inputCartService,
   getCartService,
@@ -612,5 +1106,11 @@ module.exports = {
   getPrescriptionTransactionListService,
   submitPrescriptionCopyService,
   acceptOrderService,
+  rejectPrescriptionService,
+  getTransactionDetailProductsService,
+  getTransactionListUserService,
+  uploadSlipPaymentService,
   rejectOrderService,
+  sendOrderService,
+  acceptOrderUserService,
 };
