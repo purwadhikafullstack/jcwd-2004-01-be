@@ -99,12 +99,19 @@ const getTodayReportService = async () => {
 
     let [totalStock] = await conn.query(sql);
 
-    let yesterdayStock =
-      parseInt(totalStock[0].total_stock) - parseInt(totalStock[0].moved_stock);
+    let stockPrecentageDifference = 0;
+    if (totalStock[0].moved_stock == null) {
+      stockPrecentageDifference = 0;
+      totalStock[0].moved_stock = 0;
+    } else {
+      let yesterdayStock =
+        parseInt(totalStock[0].total_stock) -
+        parseInt(totalStock[0].moved_stock);
 
-    let stockPrecentageDifference = Math.round(
-      (parseInt(totalStock[0].moved_stock) / yesterdayStock) * 100
-    );
+      stockPrecentageDifference = Math.round(
+        (parseInt(totalStock[0].moved_stock) / yesterdayStock) * 100
+      );
+    }
 
     // kadaluarsa
     sql = `SELECT
@@ -380,11 +387,7 @@ const getRingkasanStatistikService = async () => {
     await conn.beginTransaction();
 
     // Penting hari ini
-    sql = `SELECT (SELECT COUNT(*) FROM transaction WHERE status IN('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN') AND DATE(updated_at) = CURDATE()) as pesanan_baru,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DIPROSES' AND DATE(updated_at) = CURDATE()) as siap_dikirim,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DIKIRIM' AND DATE(updated_at) = CURDATE()) as sedang_dikirim,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'SELESAI' AND DATE(updated_at) = CURDATE()) as selesai,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DITOLAK' AND DATE(updated_at) = CURDATE()) as dibatalkan`;
+    sql = ``;
 
     let [importantToday] = await conn.query(sql);
 
@@ -402,7 +405,76 @@ const getRingkasanStatistikService = async () => {
   }
 };
 
-const getChartPembatalan = async () => {
+const getChartPembatalanService = async (filter) => {
+  let conn, sql;
+
+  let year = new Date().getFullYear();
+  let month = new Date().getMonth();
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    let data = [];
+    let label = [];
+    // Penting hari ini
+    if (filter == "bulan") {
+      for (let i = 1; i < 13; i++) {
+        if (i != 12) {
+          sql = `SELECT COUNT(*) as total_ditolak FROM transaction WHERE status = 'DITOLAK' AND updated_at >= '${year}-${i}-01' AND updated_at <= '${year}-${
+            i + 1
+          }-01'`;
+        } else {
+          sql = `SELECT COUNT(*) as total_ditolak FROM transaction WHERE status = 'DITOLAK' AND updated_at >= '${year}-${i}-01' AND updated_at <= '${
+            year + 1
+          }-01-01'`;
+        }
+        let [resultDitolak] = await conn.query(sql);
+        data.push(resultDitolak[0].total_ditolak);
+      }
+      label = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+    }
+
+    if (filter == "tahun") {
+      for (let i = -1; i < 4; i++) {
+        sql = `SELECT COUNT(*) as total_ditolak FROM transaction WHERE status = 'DITOLAK' AND updated_at >= '${
+          year - i - 1
+        }-01-01' AND updated_at < '${year - i}-01-01'`;
+        let [resultDitolak] = await conn.query(sql);
+        data.unshift(resultDitolak[0].total_ditolak);
+        label.unshift(year - i - 1);
+      }
+    }
+
+    await conn.commit();
+    return {
+      data,
+      label,
+      message: "Success get Ringkasan Statistik!",
+    };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const getReportService = async (periode, year, month) => {
   let conn, sql;
 
   try {
@@ -410,18 +482,26 @@ const getChartPembatalan = async () => {
     await conn.beginTransaction();
 
     // Penting hari ini
-    sql = `SELECT (SELECT COUNT(*) FROM transaction WHERE status IN('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN') AND DATE(updated_at) = CURDATE()) as pesanan_baru,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DIPROSES' AND DATE(updated_at) = CURDATE()) as siap_dikirim,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DIKIRIM' AND DATE(updated_at) = CURDATE()) as sedang_dikirim,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'SELESAI' AND DATE(updated_at) = CURDATE()) as selesai,
-    (SELECT COUNT(*) FROM transaction WHERE status = 'DITOLAK' AND DATE(updated_at) = CURDATE()) as dibatalkan`;
+    if (periode == "bulanan") {
+      sql = `SELECT sum(capital) as total_capital, sum(gross_sale) as total_gross_sale, sum(net_profit)  as total_net_profit FROM report WHERE YEAR(updated_at) = ${year} AND MONTH(updated_at) = ${month}`;
+    } else if (periode == "tahunan") {
+      sql = `SELECT sum(capital) as total_capital, sum(gross_sale) as total_gross_sale, sum(net_profit)  as total_net_profit FROM report WHERE YEAR(updated_at) = ${year}`;
+    }
 
-    let [importantToday] = await conn.query(sql);
+    let [report] = await conn.query(sql);
+
+    if (
+      report[0].total_capital == null ||
+      report[0].total_gross_sale == null ||
+      report[0].total_net_profit == null
+    ) {
+      throw "No Data.";
+    }
 
     await conn.commit();
     return {
-      data: importantToday[0],
-      message: "Success get Ringkasan Statistik!",
+      result: report[0],
+      message: "Success get laporan laba rugi!",
     };
   } catch (error) {
     console.log(error);
@@ -437,5 +517,6 @@ module.exports = {
   getChartProfitService,
   getChartPenjualanService,
   getRingkasanStatistikService,
-  getChartPembatalan,
+  getChartPembatalanService,
+  getReportService,
 };
