@@ -225,6 +225,7 @@ const getTransactionListUser = async (req, res) => {
     obatBebas,
     orderByDate,
   } = req.query;
+  console.log(req.query, "ini query");
   const { id } = req.user;
   try {
     const data = await getTransactionListUserService(
