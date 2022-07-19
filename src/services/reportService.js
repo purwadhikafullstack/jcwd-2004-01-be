@@ -155,7 +155,7 @@ const getTodayReportService = async () => {
   }
 };
 
-const getChartProfitService = async ({ filter }) => {
+const getChartProfitService = async (filter, variant) => {
   let conn, sql;
   console.log(filter, "ini filter");
 
@@ -168,7 +168,7 @@ const getChartProfitService = async ({ filter }) => {
     let data = [];
     let label = [];
     if (filter == "bulan") {
-      for (let i = 1; i < 12; i++) {
+      for (let i = 1; i < 13; i++) {
         if (i != 12) {
           sql = `SELECT * FROM transaction WHERE status = 'SELESAI' AND updated_at >= '${year}-${i}-01' AND updated_at <= '${year}-${
             i + 1
@@ -193,9 +193,16 @@ const getChartProfitService = async ({ filter }) => {
         }
 
         let thisMonthProfit = 0;
-        for (let i = 0; i < todayTransaction.length; i++) {
-          const { price, original_price, quantity } = todayTransaction[i];
-          thisMonthProfit += price * quantity - original_price * quantity;
+        if (variant == "gross") {
+          for (let i = 0; i < todayTransaction.length; i++) {
+            const { price, quantity } = todayTransaction[i];
+            thisMonthProfit += price * quantity;
+          }
+        } else {
+          for (let i = 0; i < todayTransaction.length; i++) {
+            const { price, original_price, quantity } = todayTransaction[i];
+            thisMonthProfit += price * quantity - original_price * quantity;
+          }
         }
         data.push(thisMonthProfit);
         label = [
@@ -235,9 +242,16 @@ const getChartProfitService = async ({ filter }) => {
         }
 
         let thisMonthProfit = 0;
-        for (let i = 0; i < todayTransaction.length; i++) {
-          const { price, original_price, quantity } = todayTransaction[i];
-          thisMonthProfit += price * quantity - original_price * quantity;
+        if (variant == "gross") {
+          for (let i = 0; i < todayTransaction.length; i++) {
+            const { price, quantity } = todayTransaction[i];
+            thisMonthProfit += price * quantity;
+          }
+        } else {
+          for (let i = 0; i < todayTransaction.length; i++) {
+            const { price, original_price, quantity } = todayTransaction[i];
+            thisMonthProfit += price * quantity - original_price * quantity;
+          }
         }
         data.unshift(thisMonthProfit);
         label.unshift(year - i - 1);
@@ -255,7 +269,173 @@ const getChartProfitService = async ({ filter }) => {
   }
 };
 
+const getChartPenjualanService = async ({ filter }) => {
+  let conn, sql;
+  console.log(filter, "ini filter");
+
+  let year = new Date().getFullYear();
+  let month = new Date().getMonth();
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    let data = [];
+    let label = [];
+    let average = 0;
+    if (filter == "bulan") {
+      for (let i = 1; i < 13; i++) {
+        if (i != 12) {
+          sql = `SELECT * FROM transaction WHERE status = 'SELESAI' AND updated_at >= '${year}-${i}-01' AND updated_at <= '${year}-${
+            i + 1
+          }-01'`;
+        } else {
+          sql = `SELECT * FROM transaction WHERE status = 'SELESAI' AND updated_at >= '${year}-${i}-01' AND updated_at <= '${
+            year + 1
+          }-01-01'`;
+        }
+        let [todayTransaction] = await conn.query(sql);
+
+        sql = `SELECT quantity FROM transaction_detail WHERE transaction_id = ?`;
+        for (let i = 0; i < todayTransaction.length; i++) {
+          let [resultTransactionDetail] = await conn.query(
+            sql,
+            todayTransaction[i].id
+          );
+          todayTransaction[i] = {
+            ...todayTransaction[i],
+            ...resultTransactionDetail[0],
+          };
+        }
+
+        let thisMonthSells = 0;
+        for (let i = 0; i < todayTransaction.length; i++) {
+          const { quantity } = todayTransaction[i];
+          thisMonthSells += quantity;
+        }
+        data.push(thisMonthSells);
+        label = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+      }
+      average = Math.floor(data.reduce((a, b) => a + b, 0) / data.length);
+    }
+
+    if (filter == "tahun") {
+      for (let i = -1; i < 4; i++) {
+        sql = `SELECT * FROM transaction WHERE status = 'SELESAI' AND updated_at >= '${
+          year - i - 1
+        }-01-01' AND updated_at < '${year - i}-01-01'`;
+        let [todayTransaction] = await conn.query(sql);
+
+        sql = `SELECT quantity FROM transaction_detail WHERE transaction_id = ?`;
+        for (let i = 0; i < todayTransaction.length; i++) {
+          let [resultTransactionDetail] = await conn.query(
+            sql,
+            todayTransaction[i].id
+          );
+          todayTransaction[i] = {
+            ...todayTransaction[i],
+            ...resultTransactionDetail[0],
+          };
+        }
+
+        let thisMonthSells = 0;
+        for (let i = 0; i < todayTransaction.length; i++) {
+          const { quantity } = todayTransaction[i];
+          thisMonthSells += quantity;
+        }
+        data.unshift(thisMonthSells);
+        label.unshift(year - i - 1);
+      }
+      average = Math.floor(data.reduce((a, b) => a + b, 0) / data.length);
+    }
+
+    await conn.commit();
+    return { data, label, average, message: "Success get chart profit!" };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const getRingkasanStatistikService = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    // Penting hari ini
+    sql = `SELECT (SELECT COUNT(*) FROM transaction WHERE status IN('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN') AND DATE(updated_at) = CURDATE()) as pesanan_baru,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DIPROSES' AND DATE(updated_at) = CURDATE()) as siap_dikirim,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DIKIRIM' AND DATE(updated_at) = CURDATE()) as sedang_dikirim,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'SELESAI' AND DATE(updated_at) = CURDATE()) as selesai,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DITOLAK' AND DATE(updated_at) = CURDATE()) as dibatalkan`;
+
+    let [importantToday] = await conn.query(sql);
+
+    await conn.commit();
+    return {
+      data: importantToday[0],
+      message: "Success get Ringkasan Statistik!",
+    };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const getChartPembatalan = async () => {
+  let conn, sql;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    // Penting hari ini
+    sql = `SELECT (SELECT COUNT(*) FROM transaction WHERE status IN('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN') AND DATE(updated_at) = CURDATE()) as pesanan_baru,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DIPROSES' AND DATE(updated_at) = CURDATE()) as siap_dikirim,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DIKIRIM' AND DATE(updated_at) = CURDATE()) as sedang_dikirim,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'SELESAI' AND DATE(updated_at) = CURDATE()) as selesai,
+    (SELECT COUNT(*) FROM transaction WHERE status = 'DITOLAK' AND DATE(updated_at) = CURDATE()) as dibatalkan`;
+
+    let [importantToday] = await conn.query(sql);
+
+    await conn.commit();
+    return {
+      data: importantToday[0],
+      message: "Success get Ringkasan Statistik!",
+    };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = {
   getTodayReportService,
   getChartProfitService,
+  getChartPenjualanService,
+  getRingkasanStatistikService,
+  getChartPembatalan,
 };
