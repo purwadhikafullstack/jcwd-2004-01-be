@@ -41,3 +41,15 @@
 // const { uuid } = require("./src/helpers/UUID");
 
 // console.log(uuid("HEY"));
+// const dayjs = require("dayjs");
+
+// const date = dayjs(new Date()).format("YYYYMMDD");
+
+// console.log(date);
+
+// const job = schedule.scheduleJob("5 * * * * *", testNodeSchedule());
+// const schedule = require("node-schedule");
+
+// schedule.scheduleJob("/5 * * * * *", function async() {
+//   console.log("The answer to life, the universe, and everything!");
+// });

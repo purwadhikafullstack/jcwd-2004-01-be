@@ -39,10 +39,12 @@ const {
   authenticationRoutes,
   productRoutes,
   userprofileRoutes,
+  reportRoutes,
 } = require("./src/routes");
 app.use("/auth", authenticationRoutes);
 app.use("/product", productRoutes);
 app.use("/profile", userprofileRoutes);
+app.use("/report", reportRoutes);
 
 // Transaction Routes
 const { transactionRoutes } = require("./src/routes");

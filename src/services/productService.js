@@ -1,5 +1,7 @@
 const { dbCon } = require("./../connection");
 const fs = require("fs");
+const dayjs = require("dayjs");
+const schedule = require("node-schedule");
 
 const inputProductService = async (
   name,
@@ -594,7 +596,7 @@ const getHomeProductService = async (
   }
 
   if (!limit) {
-    limit = 10;
+    limit = 12;
   }
 
   // if (!search) {
@@ -793,8 +795,6 @@ const editProductService = async (
       !warning ||
       !usage ||
       !brand_name ||
-      !quantity ||
-      !expired_at ||
       !type_name ||
       !symptom_name ||
       !category_name
@@ -1033,7 +1033,7 @@ const getProductTerkaitService = async (props) => {
       data[i] = { ...data[i], imageProduct: resultImage[0].image };
     }
 
-    conn.commit();
+    await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
@@ -1059,8 +1059,10 @@ const inputCartService = async (id, product_id, quantity) => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?`;
+    sql = `SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND is_deleted = 'NO'`;
     let [haveProduct] = await conn.query(sql, [id, product_id]);
+
+    console.log(haveProduct, "haveproduct");
 
     let result;
     if (haveProduct.length) {
@@ -1079,7 +1081,7 @@ const inputCartService = async (id, product_id, quantity) => {
       [result] = await conn.query(sql, dataProduct);
     }
 
-    conn.commit();
+    await conn.commit();
     return result[0];
   } catch (error) {
     console.log(error);
@@ -1097,7 +1099,7 @@ const getPrescriptionProductService = async () => {
     conn = await dbCon.promise().getConnection();
     await conn.beginTransaction();
 
-    sql = `select product.id, name, unit,
+    sql = `select product.id, name, unit, original_price,
     (select sum(quantity) from stock where product_id = product.id) as total_stock from product
     inner join category_product on product.id = category_product.product_id
     left join (select name as category_name, id from category) as kategori on category_id = kategori.id where product.is_deleted = "NO"
@@ -1124,6 +1126,276 @@ const getPrescriptionProductService = async () => {
   }
 };
 
+const getQuantityProductService = async (dataInput) => {
+  let conn, sql;
+  console.log(dataInput, "ini data input");
+  const { expired_at, product_id } = dataInput;
+  console.log(expired_at, product_id);
+  try {
+    conn = await dbCon.promise().getConnection();
+    conn.beginTransaction();
+
+    sql = `SELECT quantity FROM stock WHERE product_id = ? AND expired_at = ?`;
+    let [resultQuantity] = await conn.query(sql, [product_id, expired_at]);
+    if (!resultQuantity.length) {
+      console.log("lewataku");
+      result = {
+        quantity: 0,
+      };
+      return { result, message: "Stock with the expired date not found." };
+    }
+
+    await conn.commit();
+    return {
+      result: resultQuantity[0],
+      message: "Get Quantity Product Success",
+    };
+  } catch (error) {
+    console.log(error);
+    conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const updateStockService = async (data, user_id) => {
+  let conn, sql;
+
+  const { expired_at, quantity, product_id } = data;
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    // 1. select stock where = tgl, kalo ada Update, kalo ga insert into
+    sql = `SELECT id, quantity FROM stock WHERE expired_at = ? AND product_id = ?`;
+    let [resultStock] = await conn.query(sql, [expired_at, product_id]);
+
+    if (!resultStock.length) {
+      sql = `INSERT INTO stock SET ?`;
+      console.log("lewat sini gan");
+      dataUpdate = {
+        quantity,
+        expired_at,
+        product_id,
+      };
+      let [resultInputStock] = await conn.query(sql, dataUpdate);
+
+      // 2. input log
+      sql = `INSERT INTO log SET ?`;
+      dataLog = {
+        activity: "UPDATE STOCK",
+        quantity: quantity,
+        stock_id: resultInputStock.insertId,
+        stock: quantity,
+        user_id,
+      };
+      await conn.query(sql, dataLog);
+
+      await conn.commit();
+      return { message: "Update Stock Success!" };
+    }
+    //update stock
+    sql = `UPDATE stock SET quantity = ? WHERE expired_at = ? AND product_id = ?`;
+    let [resultUpdate] = await conn.query(sql, [
+      quantity,
+      expired_at,
+      product_id,
+    ]);
+
+    let quantityBefore = resultStock[0].quantity;
+    let quantityLog = quantity - quantityBefore;
+
+    // 2. input log
+    sql = `INSERT INTO log SET ?`;
+    dataLog = {
+      activity: "UPDATE STOCK",
+      quantity: quantityLog,
+      stock_id: resultStock[0].id,
+      stock: quantity,
+      user_id,
+    };
+    await conn.query(sql, dataLog);
+
+    await conn.commit();
+    return { message: "Update Stock Success!" };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+const getLogService = async (
+  product_id,
+  year,
+  month,
+  activity,
+  page,
+  limit
+) => {
+  let sql, conn;
+  year = parseInt(year);
+  month = parseInt(month);
+
+  console.log(page, limit, activity, "page & limit");
+
+  // filter tahun bulan
+  if (!year && !month) {
+    console.log("lewat !year && !month");
+    year = ``;
+    month = ``;
+  } else if (year && !month) {
+    console.log("lewat year && !month");
+    year = `AND log.created_at >= '${year}-01-01' AND log.created_at <= '${year}-12-31'`;
+  } else if (year && month) {
+    year = `AND log.created_at >= '${year}-01-01' AND log.created_at <= '${year}-12-31' AND month(log.created_at) = ${month}`;
+  }
+
+  //filter activity
+  if (!activity) {
+    activity = ``;
+  } else {
+    activity = activity.replace(/_/g, " ");
+    activity = `AND activity = '${activity}'`;
+  }
+
+  if (!page) {
+    page = 0;
+  }
+
+  if (!limit) {
+    limit = 10;
+  }
+
+  limit = parseInt(limit);
+  let offset = parseInt(page) * parseInt(limit);
+
+  try {
+    conn = await dbCon.promise().getConnection();
+    await conn.beginTransaction();
+
+    sql = `SELECT log.id, log.created_at, log.activity, user.fullname, log.quantity, log.stock, stock.expired_at FROM log
+    LEFT JOIN stock on log.stock_id = stock.id
+    LEFT JOIN product on stock.product_id = product.id
+    LEFT JOIN user on log.user_id = user.id
+    WHERE product_id = ?
+    ${year}
+    ${activity}
+    ORDER BY log.created_at DESC
+    LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(limit)}`;
+
+    let [result] = await conn.query(sql, product_id);
+    console.log(result, "ini result");
+    let mapedResult = result.map((val) => {
+      if (val.quantity < 0) {
+        return {
+          ...val,
+          created_at: dayjs(val.created_at).format("DD MMMM YYYY"),
+          expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
+          keluar: val.quantity * -1,
+          masuk: 0,
+        };
+      } else {
+        return {
+          ...val,
+          created_at: dayjs(val.created_at).format("DD MMMM YYYY"),
+          expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
+          keluar: 0,
+          masuk: val.quantity,
+        };
+      }
+    });
+
+    mapedResult.forEach((object) => {
+      delete object["quantity"];
+    });
+
+    // count product yang terfilter
+    sql = `select count(*) as total_data from (SELECT log.id, log.created_at, log.activity, user.fullname, log.quantity, log.stock, stock.expired_at FROM log
+    LEFT JOIN stock on log.stock_id = stock.id
+    LEFT JOIN product on stock.product_id = product.id
+    LEFT JOIN user on log.user_id = user.id
+    WHERE product_id = ?
+    ${year}
+    ${activity}) as table_data`;
+
+    let [totalData] = await conn.query(sql, product_id);
+
+    // count total stock yang ada
+    sql = `SELECT name, sum(quantity) total_quantity FROM stock
+    LEFT JOIN product ON stock.product_id = product.id
+    WHERE product.id = ?`;
+
+    let [totalStock] = await conn.query(sql, product_id);
+
+    await conn.commit();
+    return {
+      result: mapedResult,
+      totalData,
+      detailProduct: totalStock[0],
+      message: "Update Stock Success!",
+    };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    throw new Error(error || "Network Error");
+  } finally {
+    conn.release();
+  }
+};
+
+//Delete Stock CRON
+const deleteStockCRON = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    await conn.beginTransaction();
+
+    sql = `select * from stock where expired_at = current_date() and quantity > 0`;
+    let [expiredStocks] = await conn.query(sql);
+
+    for (let i = 0; i < expiredStocks.length; i++) {
+      const element = expiredStocks[i];
+      //Delete Stock
+      sql = `update stock set ? where id = ?`;
+      let updateStock = {
+        quantity: 0,
+      };
+      await conn.query(sql, [updateStock, element.id]);
+      console.log(`kedelete yang ini-${element.id}`);
+
+      //Insert Into Log
+      sql = `insert into log set ?`;
+      let insertLog = {
+        activity: "CLEARED BY SYSTEM",
+        quantity: parseInt(element.quantity) * -1,
+        stock: 0,
+        stock_id: element.id,
+      };
+      await conn.query(sql, insertLog);
+      console.log(`diinput yang ini-${element.id}`);
+    }
+
+    await conn.commit();
+    conn.release();
+    return { message: "Deleted Automatically" };
+  } catch (error) {
+    console.log(error);
+    await conn.rollback();
+    conn.release();
+    throw new Error(error.message || error);
+  }
+};
+
+// schedule.scheduleJob("*/5 * * * * *", () => {
+//   deleteStockCRON();
+// });
+
 module.exports = {
   inputProductService,
   getCategoryService,
@@ -1138,4 +1410,7 @@ module.exports = {
   getProductTerkaitService,
   inputCartService,
   getPrescriptionProductService,
+  updateStockService,
+  getQuantityProductService,
+  getLogService,
 };
