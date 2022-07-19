@@ -221,6 +221,8 @@ const getTransactionListUser = async (req, res) => {
     dikirim,
     selesai,
     dibatalkan,
+    obatResep,
+    obatBebas,
     orderByDate,
   } = req.query;
   const { id } = req.user;
@@ -233,6 +235,8 @@ const getTransactionListUser = async (req, res) => {
       dikirim,
       selesai,
       dibatalkan,
+      obatResep,
+      obatBebas,
       orderByDate,
       id
     );

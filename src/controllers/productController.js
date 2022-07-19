@@ -17,6 +17,7 @@ const {
   getQuantityProductService,
   updateStockService,
   getLogService,
+  getProductsDiscountService,
 } = require("../services/productService");
 
 const inputProductController = async (req, res) => {
@@ -373,6 +374,16 @@ const getLogController = async (req, res) => {
   }
 };
 
+//Get Product Discount
+const getProductsDiscount = async (req, res) => {
+  try {
+    const data = await getProductsDiscountService();
+    return res.status(200).send(data);
+  } catch (error) {
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   inputProductController,
   getCategory,
@@ -390,4 +401,5 @@ module.exports = {
   getQuantityProductController,
   updateStockController,
   getLogController,
+  getProductsDiscount,
 };
