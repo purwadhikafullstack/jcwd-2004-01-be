@@ -853,11 +853,25 @@ const getTransactionListUserService = async (
   dikirim,
   selesai,
   dibatalkan,
-  orderByDate,
-  id,
   obatResep,
-  obatBebas
+  obatBebas,
+  orderByDate,
+  id
 ) => {
+  console.log(
+    page,
+    limit,
+    menunggu,
+    diproses,
+    dikirim,
+    selesai,
+    dibatalkan,
+    orderByDate,
+    id,
+    obatResep,
+    obatBebas,
+    "cie gitu"
+  );
   if (!menunggu) {
     menunggu = ``;
   } else {
