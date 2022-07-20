@@ -140,15 +140,38 @@ const uploadPrescriptionService = async (img, id) => {
     sql = `select address, recipient_name, recipient_number, province_id, city_id from address where user_id = ? and is_default = "YES"`;
     let [userAddress] = await conn.query(sql, id);
 
+    //Add City Name
+    for (let i = 0; i < userAddress.length; i++) {
+      const element = userAddress[i];
+      sql = `select name from city where id = ?`;
+      let [cityName] = await conn.query(sql, element.city_id);
+      userAddress[i] = {
+        ...userAddress[i],
+        city: cityName,
+      };
+    }
+
+    //Add Province Name
+    for (let i = 0; i < userAddress.length; i++) {
+      const element = userAddress[i];
+      sql = `select name from province where id = ?`;
+      let [provinceName] = await conn.query(sql, element.province_id);
+      userAddress[i] = {
+        ...userAddress[i],
+        province: provinceName,
+      };
+    }
+
     //Insert to transaction table
     let insertData = {
       user_id: id,
-      address: userAddress[0].address,
+      address: `${userAddress[0].address}, Kota ${userAddress[0].city[0].name}, ${userAddress[0].province[0].name}`,
       status: 1,
       phone_number: userAddress[0].recipient_number,
       recipient: userAddress[0].recipient_name,
       transaction_code: codeGenerator("TRA", id),
       expired_at: dayjs(new Date()).add(2, "day").format("YYYY-MM-DD HH:mm:ss"),
+      is_prescription: 1,
     };
 
     sql = `insert into transaction set ?`;
@@ -719,6 +742,7 @@ const submitPrescriptionCopyService = async (data, transaction_id, id) => {
     let updatePrescription = {
       physician_in_charge: prescription_values[0].physician_in_charge,
       patient: prescription_values[0].patient,
+      status: 1,
     };
 
     await conn.query(sql, [updatePrescription, transaction_id]);
@@ -829,9 +853,25 @@ const getTransactionListUserService = async (
   dikirim,
   selesai,
   dibatalkan,
+  obatResep,
+  obatBebas,
   orderByDate,
   id
 ) => {
+  console.log(
+    page,
+    limit,
+    menunggu,
+    diproses,
+    dikirim,
+    selesai,
+    dibatalkan,
+    orderByDate,
+    id,
+    obatResep,
+    obatBebas,
+    "cie gitu"
+  );
   if (!menunggu) {
     menunggu = ``;
   } else {
@@ -860,6 +900,18 @@ const getTransactionListUserService = async (
     dibatalkan = ``;
   } else {
     dibatalkan = `AND status = 'DITOLAK'`;
+  }
+
+  if (!obatResep) {
+    obatResep = ``;
+  } else {
+    obatResep = `AND is_prescription = 'YES'`;
+  }
+
+  if (!obatBebas) {
+    obatBebas = ``;
+  } else {
+    obatBebas = `AND is_prescription = 'NO'`;
   }
 
   let order;
@@ -901,7 +953,7 @@ const getTransactionListUserService = async (
 
     await conn.beginTransaction();
 
-    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${order} LIMIT ${dbCon.escape(
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.is_prescription, transaction.payment_slip, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
 
@@ -933,7 +985,7 @@ const getTransactionListUserService = async (
     }
 
     //x-total-product
-    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan}) as data_table`;
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas}) as data_table`;
 
     let [totalData] = await conn.query(sql);
 
@@ -1090,9 +1142,9 @@ const rejectOrderServiceCRON = async () => {
   }
 };
 
-// schedule.scheduleJob("* * * * *", () => {
-//   rejectOrderServiceCRON();
-// });
+schedule.scheduleJob("* * * * *", () => {
+  rejectOrderServiceCRON();
+});
 
 module.exports = {
   inputCartService,

@@ -1348,6 +1348,37 @@ const getLogService = async (
   }
 };
 
+//Get Carousel Diskon Hari ini
+const getProductsDiscountService = async () => {
+  let conn, sql;
+  try {
+    conn = await dbCon.promise().getConnection();
+
+    sql = `select product.id, name, price, unit, type_name, brand_name from product
+    inner join (select name as type_name, id from type) as type on product.type_id = type.id
+    inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
+    where true AND product.is_deleted = "NO" LIMIT 0, 7`;
+
+    let [productDiscount] = await conn.query(sql);
+
+    //put image on data
+    sql = `select image from product_image where product_id = ?`;
+
+    for (let i = 0; i < productDiscount.length; i++) {
+      const element = productDiscount[i];
+      let [images] = await conn.query(sql, element.id);
+      productDiscount[i].images = images;
+    }
+
+    conn.release();
+    return { productDiscount };
+  } catch (error) {
+    console.log(error);
+    conn.release;
+    throw new Error(error || "Network Error");
+  }
+};
+
 //Delete Stock CRON
 const deleteStockCRON = async () => {
   let conn, sql;
@@ -1392,9 +1423,9 @@ const deleteStockCRON = async () => {
   }
 };
 
-// schedule.scheduleJob("*/5 * * * * *", () => {
-//   deleteStockCRON();
-// });
+schedule.scheduleJob("* * * * *", () => {
+  deleteStockCRON();
+});
 
 module.exports = {
   inputProductService,
@@ -1413,4 +1444,5 @@ module.exports = {
   updateStockService,
   getQuantityProductService,
   getLogService,
+  getProductsDiscountService,
 };

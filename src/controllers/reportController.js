@@ -3,6 +3,8 @@ const {
   getChartProfitService,
   getChartPenjualanService,
   getRingkasanStatistikService,
+  getReportService,
+  getChartPembatalanService,
 } = require("../services/reportService");
 
 const getTodayReportController = async (req, res) => {
@@ -53,9 +55,36 @@ const getRingkasanStatistikController = async (req, res) => {
   }
 };
 
+const getChartPembatalanController = async (req, res) => {
+  const { filter } = req.query;
+  try {
+    let result = await getChartPembatalanService(filter);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
+const getReportController = async (req, res) => {
+  const { periode, year, month } = req.query;
+
+  try {
+    let result = await getReportService(periode, year, month);
+
+    return res.status(200).send(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ message: error.message || error });
+  }
+};
+
 module.exports = {
   getTodayReportController,
   getChartProfitController,
   getChartPenjualanController,
   getRingkasanStatistikController,
+  getReportController,
+  getChartPembatalanController,
 };

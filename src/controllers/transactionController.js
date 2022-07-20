@@ -221,8 +221,11 @@ const getTransactionListUser = async (req, res) => {
     dikirim,
     selesai,
     dibatalkan,
+    obatResep,
+    obatBebas,
     orderByDate,
   } = req.query;
+  console.log(req.query, "ini query");
   const { id } = req.user;
   try {
     const data = await getTransactionListUserService(
@@ -233,6 +236,8 @@ const getTransactionListUser = async (req, res) => {
       dikirim,
       selesai,
       dibatalkan,
+      obatResep,
+      obatBebas,
       orderByDate,
       id
     );

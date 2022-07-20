@@ -241,3 +241,14 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZV9pZ
 {
     
 }
+
+###
+
+GET http://localhost:5000/product/get-products-discount HTTP/1.1
+Content-Type: application/json
+
+{
+
+}
+
+###
