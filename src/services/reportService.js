@@ -92,6 +92,8 @@ const getTodayReportService = async () => {
       );
     }
 
+    console.log();
+
     // sisa stock hari ini bingung bat ini, bentar yak
     sql = `SELECT 
     (SELECT SUM(quantity) FROM stock) as total_stock,
