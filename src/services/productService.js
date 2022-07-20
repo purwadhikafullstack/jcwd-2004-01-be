@@ -1423,9 +1423,9 @@ const deleteStockCRON = async () => {
   }
 };
 
-schedule.scheduleJob("* * * * *", () => {
-  deleteStockCRON();
-});
+// schedule.scheduleJob("* * * * *", () => {
+//   deleteStockCRON();
+// });
 
 module.exports = {
   inputProductService,

@@ -1128,9 +1128,9 @@ const rejectOrderServiceCRON = async () => {
   }
 };
 
-schedule.scheduleJob("* * * * *", () => {
-  rejectOrderServiceCRON();
-});
+// schedule.scheduleJob("* * * * *", () => {
+//   rejectOrderServiceCRON();
+// });
 
 module.exports = {
   inputCartService,
