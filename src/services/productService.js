@@ -185,6 +185,8 @@ const inputProductService = async (
       quantity,
       expired_at,
     ]);
+
+    let stock_id = resultStock.insertId;
     // }
 
     //insert into symptom
@@ -234,6 +236,17 @@ const inputProductService = async (
         ]);
       }
     }
+
+    // input log
+    sql = `INSERT INTO log SET ?`;
+    dataLog = {
+      activity: "UPDATE STOCK",
+      quantity: quantity,
+      stock_id: stock_id,
+      stock: quantity,
+      user_id: id,
+    };
+    await conn.query(sql, dataLog);
 
     await conn.commit();
     return { message: "Product Input Success" };
