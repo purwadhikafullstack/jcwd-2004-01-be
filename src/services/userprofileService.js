@@ -450,7 +450,7 @@ const addAddressService = async (data, id) => {
   } catch (error) {
     console.log(error);
     await conn.rollback();
-    conn.release;
+    conn.release();
     throw new Error(error.message || error);
   }
 };
