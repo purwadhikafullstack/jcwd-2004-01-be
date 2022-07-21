@@ -132,7 +132,7 @@ const verifyAccountService = async (id) => {
     conn.release();
     return { data: result[0] };
   } catch (error) {
-    conn.rollback();
+    await conn.rollback();
     conn.release();
     console.log(error);
     throw new Error(error.message || error);

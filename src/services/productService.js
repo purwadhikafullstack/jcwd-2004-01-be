@@ -416,7 +416,6 @@ const getAllProductService = async (
     )}`;
 
     let [data] = await conn.query(sql);
-    console.log(data, "ini data OOOOOOOOOOOOOOOOOIII");
 
     //put category on data
     sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
