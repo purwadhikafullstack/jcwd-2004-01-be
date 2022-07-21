@@ -416,14 +416,14 @@ const getAllProductService = async (
     )}`;
 
     let [data] = await conn.query(sql);
-    console.log(data[0]);
 
     //put category on data
     sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
 
     for (let i = 0; i < data.length; i++) {
-      const element = data[i];
+      let element = data[i];
       let [categories] = await conn.query(sql, element.id);
+      data[i] = { ...data[i], num: page * limit + (i + 1) };
       data[i].categories = categories;
     }
 
@@ -469,6 +469,8 @@ const getProductService = async (id) => {
 
     let [data] = await conn.query(sql, id);
 
+    console.log(data, "ini data");
+
     //put category on data
     sql = `select id, name from category_product cp inner join category c on cp.category_id = c.id where product_id = ?`;
 
@@ -477,7 +479,7 @@ const getProductService = async (id) => {
       let [categories] = await conn.query(sql, element.id);
       data[i].categories = categories;
     }
-    console.log(data[0]);
+    console.log(data[0], "ini data 0");
 
     //put symptomps on data
 
@@ -1290,7 +1292,7 @@ const getLogService = async (
 
     let [result] = await conn.query(sql, product_id);
     console.log(result, "ini result");
-    let mapedResult = result.map((val) => {
+    let mapedResult = result.map((val, i) => {
       if (val.quantity < 0) {
         return {
           ...val,
@@ -1298,6 +1300,7 @@ const getLogService = async (
           expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
           keluar: val.quantity * -1,
           masuk: 0,
+          num: page * limit + (1 + i),
         };
       } else {
         return {
@@ -1306,6 +1309,7 @@ const getLogService = async (
           expired_at: dayjs(val.expired_at).format("DD MMMM YYYY"),
           keluar: 0,
           masuk: val.quantity,
+          num: page * limit + (1 + i),
         };
       }
     });
