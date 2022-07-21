@@ -200,7 +200,7 @@ const sendEmailService = async (
     //Email
     const host =
       process.env.NODE_ENV === "production"
-        ? "http://namadomain.com"
+        ? "https://jcwd200401.purwadhikabootcamp.com"
         : "http://localhost:3000";
     const link = `${host}/${route}/${tokenEmail}`;
 
