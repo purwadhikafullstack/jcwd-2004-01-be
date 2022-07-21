@@ -46,7 +46,7 @@ const inputCartService = async (id, product_id, quantity) => {
     return result[0];
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -59,7 +59,7 @@ const getCartService = async (id) => {
 
   try {
     conn = await dbCon.promise().getConnection();
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     sql = `SELECT id, product_id, quantity FROM cart WHERE user_id = ? AND is_deleted ='NO'`;
     [data] = await conn.query(sql, user_id);
@@ -84,11 +84,11 @@ const getCartService = async (id) => {
 
     console.log(data);
 
-    await conn.commit();
+    // await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    // await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -114,7 +114,7 @@ const updateQuantityService = async (currentQuantity, cart_id) => {
     return quantityProduct[0];
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -218,17 +218,17 @@ const getBankService = async () => {
 
   try {
     conn = await dbCon.promise().getConnection();
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     //get bank
     sql = `SELECT id, name, image FROM bank`;
     let [resultBank] = await conn.query(sql);
 
-    await conn.commit();
+    // await conn.commit();
     return resultBank;
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
@@ -241,16 +241,16 @@ const deleteCartService = async (id) => {
 
   try {
     conn = await dbCon.promise().getConnection();
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     //update is Deleted
     sql = `UPDATE cart SET is_deleted = "YES" WHERE id = ?`;
     await conn.query(sql, id);
 
-    await conn.commit();
+    // await conn.commit();
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
@@ -462,7 +462,7 @@ const getPrescriptionTransactionListService = async (
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${transaction_date} ${search} ${order} LIMIT ${dbCon.escape(
       offset
@@ -513,12 +513,12 @@ const getPrescriptionTransactionListService = async (
     //   };
     // }
 
-    await conn.commit();
+    // await conn.commit();
     conn.release();
     return { prescriptionTransactionList, totalData };
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }
@@ -598,6 +598,7 @@ const rejectPrescriptionService = async (transaction_id) => {
   try {
     conn = await dbCon.promise().getConnection();
 
+    await conn.beginTransaction();
     //Update status transaction
     sql = `update transaction set ? where id = ?`;
     await conn.query(sql, [{ status: 6 }, transaction_id]);
@@ -606,10 +607,12 @@ const rejectPrescriptionService = async (transaction_id) => {
     sql = `update prescription set ? where transaction_id = ?`;
     await conn.query(sql, [{ status: 2 }, transaction_id]);
 
+    await conn.commit();
     conn.release();
     return { message: "Prescription Rejected" };
   } catch (error) {
     console.log(error);
+    await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }
@@ -951,7 +954,7 @@ const getTransactionListUserService = async (
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.is_prescription, transaction.payment_slip, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
       offset
@@ -989,12 +992,12 @@ const getTransactionListUserService = async (
 
     let [totalData] = await conn.query(sql);
 
-    await conn.commit();
+    // await conn.commit();
     conn.release();
     return { prescriptionTransactionList, totalData };
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }

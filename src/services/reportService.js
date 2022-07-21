@@ -155,7 +155,7 @@ const getTodayReportService = async () => {
     return { result, message: "Success get report!" };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -269,7 +269,7 @@ const getChartProfitService = async (filter, variant) => {
     return { data, label, message: "Success get chart profit!" };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -372,7 +372,7 @@ const getChartPenjualanService = async ({ filter }) => {
     return { data, label, average, message: "Success get chart profit!" };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -398,7 +398,7 @@ const getRingkasanStatistikService = async () => {
     };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -467,7 +467,7 @@ const getChartPembatalanService = async (filter) => {
     };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -505,7 +505,7 @@ const getReportService = async (periode, year, month) => {
     };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();

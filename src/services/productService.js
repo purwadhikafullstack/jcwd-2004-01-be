@@ -404,7 +404,7 @@ const getAllProductService = async (
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     //get product for admin dashboard
     sql = `select product.id, name, original_price, price, unit, no_obat, no_bpom,
@@ -437,10 +437,10 @@ const getAllProductService = async (
 
     // res.set("x-total-product", totalData[0].total_data);
 
-    await conn.commit();
+    // await conn.commit();
     return { data, totalData };
   } catch (error) {
-    await conn.rollback();
+    // await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
@@ -455,7 +455,7 @@ const getProductService = async (id) => {
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     //get product for admin dashboard
     sql = `select indication, composition, packaging,med_classification,need_receipt, storage_method, principal, nomor_ijin_edar, warning, description.usage, product.id, product.name, brand.name as brand, original_price, price, unit, no_obat, no_bpom, type.name as type_name,
@@ -499,10 +499,10 @@ const getProductService = async (id) => {
 
     console.log(data[0]);
 
-    await conn.commit();
+    // await conn.commit();
     return data[0];
   } catch (error) {
-    await conn.rollback();
+    // await conn.rollback();
     throw new Error(error.message || error);
   } finally {
     conn.release();
@@ -534,7 +534,7 @@ const getCategoryListService = async () => {
     let userData = {};
     userData = { ...userData, category, symptom, type, brand };
 
-    conn.release;
+    conn.release();
     return userData;
   } catch (error) {
     console.log(error);
@@ -567,7 +567,7 @@ const getHomeProductService = async (
   );
 
   if (!category) {
-    category = ``;
+    category = `and category_name = 'ibu dan anak'`;
   } else {
     category = `and category_name = "${category}"`;
   }
@@ -630,7 +630,7 @@ const getHomeProductService = async (
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
     //get product for admin dashboard
     sql = `select product.id, name, price, unit, type_name, brand_name, category_name, symptom_name,
     (select sum(quantity) from stock where product_id = product.id) as total_stock from product
@@ -684,12 +684,12 @@ const getHomeProductService = async (
 
     // res.set("x-total-product", totalData[0].total_data);
 
-    await conn.commit();
+    // await conn.commit();
     conn.release();
     return { data, totalData };
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     conn.release();
     throw new Error(error.message || error);
   }
@@ -987,7 +987,7 @@ const editProductService = async (
     return { message: "Product Updated!" };
   } catch (error) {
     console.log(error);
-    await onn.rollback();
+    await conn.rollback();
     if (imagearrpath) {
       // klo foto sudah terupload dan sql gaal maka fotonya dihapus
       for (let i = 0; i < imagearrpath.length; i++) {
@@ -1008,7 +1008,7 @@ const getProductTerkaitService = async (props) => {
   try {
     conn = await dbCon.promise().getConnection();
 
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     // dapet product_id dari symptom_id dulu
     sql = `SELECT product_id FROM symptom_product WHERE symptom_id = ?`;
@@ -1033,11 +1033,11 @@ const getProductTerkaitService = async (props) => {
       data[i] = { ...data[i], imageProduct: resultImage[0].image };
     }
 
-    await conn.commit();
+    // await conn.commit();
     return data;
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    // await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -1085,7 +1085,7 @@ const inputCartService = async (id, product_id, quantity) => {
     return result[0];
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -1097,7 +1097,7 @@ const getPrescriptionProductService = async () => {
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     sql = `select product.id, name, unit, original_price,
     (select sum(quantity) from stock where product_id = product.id) as total_stock from product
@@ -1115,12 +1115,12 @@ const getPrescriptionProductService = async () => {
       products[i].categories = categories;
     }
 
-    await conn.commit();
+    // await conn.commit();
     conn.release();
     return products;
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    // await conn.rollback();
     conn.release();
     throw new Error(error || "Network Error");
   }
@@ -1133,7 +1133,7 @@ const getQuantityProductService = async (dataInput) => {
   console.log(expired_at, product_id);
   try {
     conn = await dbCon.promise().getConnection();
-    conn.beginTransaction();
+    // conn.beginTransaction();
 
     sql = `SELECT quantity FROM stock WHERE product_id = ? AND expired_at = ?`;
     let [resultQuantity] = await conn.query(sql, [product_id, expired_at]);
@@ -1145,14 +1145,14 @@ const getQuantityProductService = async (dataInput) => {
       return { result, message: "Stock with the expired date not found." };
     }
 
-    await conn.commit();
+    // await conn.commit();
     return {
       result: resultQuantity[0],
       message: "Get Quantity Product Success",
     };
   } catch (error) {
     console.log(error);
-    conn.rollback();
+    // await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -1276,7 +1276,7 @@ const getLogService = async (
 
   try {
     conn = await dbCon.promise().getConnection();
-    await conn.beginTransaction();
+    // await conn.beginTransaction();
 
     sql = `SELECT log.id, log.created_at, log.activity, user.fullname, log.quantity, log.stock, stock.expired_at FROM log
     LEFT JOIN stock on log.stock_id = stock.id
@@ -1332,7 +1332,7 @@ const getLogService = async (
 
     let [totalStock] = await conn.query(sql, product_id);
 
-    await conn.commit();
+    // await conn.commit();
     return {
       result: mapedResult,
       totalData,
@@ -1341,7 +1341,7 @@ const getLogService = async (
     };
   } catch (error) {
     console.log(error);
-    await conn.rollback();
+    // await conn.rollback();
     throw new Error(error || "Network Error");
   } finally {
     conn.release();
@@ -1374,7 +1374,7 @@ const getProductsDiscountService = async () => {
     return { productDiscount };
   } catch (error) {
     console.log(error);
-    conn.release;
+    conn.release();
     throw new Error(error || "Network Error");
   }
 };
