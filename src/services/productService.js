@@ -582,7 +582,7 @@ const getHomeProductService = async (
   );
 
   if (!category) {
-    category = `and category_name = 'ibu dan anak'`;
+    category = ``;
   } else {
     category = `and category_name = "${category}"`;
   }
