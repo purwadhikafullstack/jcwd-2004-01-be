@@ -170,7 +170,7 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:5000/product/get-home-product/5 HTTP/1.1
+GET http://localhost:5000/product/get-home-product?page=0&search=&symptom=&type=&brand=&category=plester&orderName=asc&orderPrice=asc HTTP/1.1
 Content-Type: application/json
 
 {

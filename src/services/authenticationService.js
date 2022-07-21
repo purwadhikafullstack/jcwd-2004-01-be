@@ -26,7 +26,7 @@ const registerService = async (data) => {
     conn = await dbCon.promise().getConnection();
 
     //Generate Username
-    username = generateFromEmail(email);
+    username = name;
 
     //Check username and email availability
     sql = `select id from user where username = ? or email = ?`;
@@ -94,7 +94,6 @@ const keepLoginService = async (id) => {
     sql = `select id, username, role_id, is_verified, fullname from user where id = ?`;
     let [result] = await conn.query(sql, [id]);
 
-    await conn.commit();
     return { data: result[0] };
   } catch (error) {
     console.log(error);
@@ -132,7 +131,7 @@ const verifyAccountService = async (id) => {
     conn.release();
     return { data: result[0] };
   } catch (error) {
-    conn.rollback();
+    await conn.rollback();
     conn.release();
     console.log(error);
     throw new Error(error.message || error);
