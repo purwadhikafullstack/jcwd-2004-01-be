@@ -601,11 +601,11 @@ const getHomeProductService = async (
     limit = 12;
   }
 
-  // if (!search) {
-  //   search = ``;
-  // } else {
-  //   search = `AND product.name LIKE '%${search}%'`;
-  // }
+  if (!search) {
+    search = ``;
+  } else {
+    search = `AND product.name LIKE '%${search}%'`;
+  }
 
   if (!orderName && !orderPrice) {
     order = ``;
@@ -627,7 +627,7 @@ const getHomeProductService = async (
 
   let offset = page * limit;
 
-  console.log(order);
+  console.log(category, type, brand, "ini yg undefined");
 
   try {
     conn = await dbCon.promise().getConnection();
@@ -641,7 +641,7 @@ const getHomeProductService = async (
     inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
     inner join (select symptom_id,product_id from symptom_product ${symptom}) as symptom_product on product.id = symptom_product.product_id
     left join (select name as symptom_name, id from symptom) as symptom on symptom_id = symptom.id
-    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${type} ${brand} AND product.is_deleted = "NO"
+    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} AND product.is_deleted = "NO"
     group by product.id ${order} LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(
       limit
     )}`;
@@ -679,7 +679,11 @@ const getHomeProductService = async (
     sql = `select count(*) as total_data from (select product.id, name, original_price, price, unit, no_obat, no_bpom,
       (select sum(quantity) from stock where product_id = product.id) as total_stock from product
       inner join category_product on product.id = category_product.product_id
-      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${category} ${search} AND product.is_deleted = "NO"
+      inner join (select name as type_name, id from type) as type on product.type_id = type.id
+      inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
+      inner join (select symptom_id,product_id from symptom_product ${symptom}) as symptom_product on product.id = symptom_product.product_id
+      left join (select name as symptom_name, id from symptom) as symptom on symptom_id = symptom.id
+      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} AND product.is_deleted = "NO"
       group by product.id) as table_data`;
 
     let [totalData] = await conn.query(sql);

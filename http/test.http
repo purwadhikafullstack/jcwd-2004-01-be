@@ -170,7 +170,16 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:5000/product/get-home-product?page=0&search=&symptom=&type=&brand=&category=plester&orderName=asc&orderPrice=asc HTTP/1.1
+GET http://localhost:5000/product/get-home-product?page=0&symptom=&type=&orderName=asc&brand=&orderPrice=asc HTTP/1.1
+Content-Type: application/json
+
+{
+
+}
+
+###
+
+GET https://jcwd200401api.purwadhikabootcamp.com/product/get-home-product?page=0&symptom=&type=&orderName=asc&brand=&orderPrice=asc HTTP/1.1
 Content-Type: application/json
 
 {
