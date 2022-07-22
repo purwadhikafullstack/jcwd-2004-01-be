@@ -91,7 +91,7 @@ const keepLoginService = async (id) => {
   let conn, sql;
   try {
     conn = await dbCon.promise().getConnection();
-    sql = `select id, username, role_id, is_verified, fullname from user where id = ?`;
+    sql = `select id, username, role_id, is_verified, fullname, profile_picture from user where id = ?`;
     let [result] = await conn.query(sql, [id]);
 
     return { data: result[0] };
