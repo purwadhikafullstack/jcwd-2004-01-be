@@ -318,6 +318,7 @@ const checkoutService = async (data, id) => {
       total_price: data.total_price,
       transaction_code: codeGenerator("TRA", data.phone_number),
       expired_at: dayjs(new Date()).add(1, "day").format("YYYY-MM-DD HH:mm:ss"),
+      is_prescription: 2,
     };
     let [resultTransaction] = await conn.query(sql, updateTransaction);
 
@@ -751,10 +752,19 @@ const submitPrescriptionCopyService = async (data, transaction_id, id) => {
     await conn.query(sql, [updatePrescription, transaction_id]);
 
     //Update Tabel Transaction
+    sql = `select user_id from transaction where id = ?`;
+    let [userID] = await conn.query(sql, transaction_id);
+
+    sql = `select city_id from address where is_default = 'YES' and user_id = ?`;
+    let [cityID] = await conn.query(sql, userID[0].user_id);
+
+    let ongkir = await getFeeService(cityID[0].city_id);
+
     sql = `update transaction set ? where id = ?`;
     let updateTransaction = {
       status: 2,
       expired_at: dayjs(new Date()).add(2, "day").format("YYYY-MM-DD HH:mm:ss"),
+      delivery_fee: ongkir,
     };
 
     await conn.query(sql, [updateTransaction, transaction_id]);
@@ -956,7 +966,7 @@ const getTransactionListUserService = async (
 
     // await conn.beginTransaction();
 
-    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.is_prescription, transaction.payment_slip, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.is_prescription, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
 
@@ -988,6 +998,7 @@ const getTransactionListUserService = async (
     }
 
     //x-total-product
+
     sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas}) as data_table`;
 
     let [totalData] = await conn.query(sql);
