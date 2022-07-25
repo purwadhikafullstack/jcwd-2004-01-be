@@ -411,6 +411,11 @@ const getPrescriptionTransactionListService = async (
   search,
   transaction_date_from,
   transaction_date_end,
+  menunggu,
+  diproses,
+  dikirim,
+  selesai,
+  dibatalkan,
   page,
   limit,
   orderDate,
@@ -458,6 +463,36 @@ const getPrescriptionTransactionListService = async (
     order = `ORDER BY transaction.created_at ${orderDate}, transaction.total_price ${orderPrice}`;
   }
 
+  if (!menunggu) {
+    menunggu = ``;
+  } else {
+    menunggu = `AND status in ('MENUNGGU_KONFIRMASI', 'MENUNGGU_PEMBAYARAN', 'MENUNGGU_KONFIRMASI_PEMBAYARAN')`;
+  }
+
+  if (!diproses) {
+    diproses = ``;
+  } else {
+    diproses = `AND status = 'DIPROSES'`;
+  }
+
+  if (!dikirim) {
+    dikirim = ``;
+  } else {
+    dikirim = `AND status = 'DIKIRIM'`;
+  }
+
+  if (!selesai) {
+    selesai = ``;
+  } else {
+    selesai = `AND status = 'SELESAI'`;
+  }
+
+  if (!dibatalkan) {
+    dibatalkan = ``;
+  } else {
+    dibatalkan = `AND status = 'DITOLAK'`;
+  }
+
   let conn, sql;
 
   try {
@@ -465,7 +500,7 @@ const getPrescriptionTransactionListService = async (
 
     // await conn.beginTransaction();
 
-    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${transaction_date} ${search} ${order} LIMIT ${dbCon.escape(
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${transaction_date} ${search} ${order} LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
 
@@ -497,7 +532,7 @@ const getPrescriptionTransactionListService = async (
     }
 
     //x-total-product
-    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${search} ${transaction_date}) as data_table`;
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${search} ${transaction_date}) as data_table`;
 
     let [totalData] = await conn.query(sql);
 
@@ -866,6 +901,9 @@ const getTransactionListUserService = async (
   dikirim,
   selesai,
   dibatalkan,
+  // semua,
+  prescription,
+  non_prescription,
   obatResep,
   obatBebas,
   orderByDate,
@@ -934,16 +972,21 @@ const getTransactionListUserService = async (
     order = `ORDER BY transaction.created_at asc`;
   }
 
-  // if (!prescription) {
-  //   prescription = ``;
-  // } else {
-  //   prescription = `where prescription is not null`;
-  // }
+  if (!prescription) {
+    prescription = ``;
+  } else {
+    prescription = `AND is_prescription = 'YES'`;
+  }
 
-  // if (!non_prescription) {
+  if (!non_prescription) {
+    non_prescription = ``;
+  } else {
+    non_prescription = `AND is_prescription = 'NO'`;
+  }
+
+  // if (semua) {
+  //   prescription = ``;
   //   non_prescription = ``;
-  // } else {
-  //   non_prescription = `where prescription is null`;
   // }
 
   if (!limit) {
@@ -966,7 +1009,7 @@ const getTransactionListUserService = async (
 
     // await conn.beginTransaction();
 
-    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.is_prescription, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
+    sql = `select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.updated_at, transaction.payment_slip, transaction.is_prescription, transaction.updated_at, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${prescription} ${non_prescription} ${obatResep} ${obatBebas} ${order} LIMIT ${dbCon.escape(
       offset
     )}, ${dbCon.escape(limit)}`;
 
@@ -999,7 +1042,7 @@ const getTransactionListUserService = async (
 
     //x-total-product
 
-    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${obatResep} ${obatBebas}) as data_table`;
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${prescription} ${non_prescription} ${obatResep} ${obatBebas}) as data_table`;
 
     let [totalData] = await conn.query(sql);
 
@@ -1156,9 +1199,9 @@ const rejectOrderServiceCRON = async () => {
   }
 };
 
-// schedule.scheduleJob("* * * * *", () => {
-//   rejectOrderServiceCRON();
-// });
+schedule.scheduleJob("*/5 * * * *", () => {
+  rejectOrderServiceCRON();
+});
 
 module.exports = {
   inputCartService,
