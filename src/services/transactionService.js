@@ -1042,9 +1042,9 @@ const getTransactionListUserService = async (
 
     //x-total-product
 
-    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${prescription} ${non_prescription} ${obatResep} ${obatBebas}) as data_table`;
+    sql = `select count(*) as total_data from (select  transaction.id, transaction.user_id, transaction.status, transaction.address, transaction.phone_number, transaction.created_at, transaction.is_prescription, transaction.updated_at, transaction.payment_slip, transaction.transaction_code, transaction.bank_id, transaction.delivery_fee, transaction.total_price, transaction.expired_at, user.username, user.fullname from transaction join user on user.id=transaction.user_id where true and user.id = ? ${menunggu} ${diproses} ${dikirim} ${selesai} ${dibatalkan} ${prescription} ${non_prescription} ${obatResep} ${obatBebas}) as data_table`;
 
-    let [totalData] = await conn.query(sql);
+    let [totalData] = await conn.query(sql, id);
 
     // await conn.commit();
     conn.release();
