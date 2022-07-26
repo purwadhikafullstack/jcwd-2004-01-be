@@ -37,7 +37,7 @@ const register = async (req, res) => {
     const tokenEmail = createJwtEmail(dataToken);
 
     //Send email
-    let templateDir = "../templates/verificationTemplate.html";
+    let templateDir = "../templates/verificationTemplate_V1.html";
     let title = "Verify it's you!";
     let route = "verification";
     await sendEmailService(userData, tokenEmail, templateDir, title, route);
@@ -127,7 +127,7 @@ const forgotPassword = async (req, res) => {
     const tokenEmail = createJwtEmail(dataToken);
 
     //Send email
-    let templateDir = "../templates/verificationTemplate.html";
+    let templateDir = "../templates/verificationTemplate_V2.html";
     let title = "Reset password";
     let route = "resetpassword";
 
@@ -190,7 +190,7 @@ const verifyMe = async (req, res) => {
     const tokenEmail = createJwtEmail(dataToken);
 
     //Send email
-    let templateDir = "../templates/verificationTemplate.html";
+    let templateDir = "../templates/verificationTemplate_V1.html";
     let title = "Verify it's you";
     let route = "verification";
 
