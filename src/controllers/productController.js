@@ -289,6 +289,8 @@ const getHomeProduct = async (req, res) => {
     symptom,
     type,
     brand,
+    minPrice,
+    maxPrice,
   } = req.query;
   // console.log(req.query);
   // console.log(search, page, limit, category, orderName, orderPrice);
@@ -302,7 +304,9 @@ const getHomeProduct = async (req, res) => {
       orderPrice,
       symptom,
       type,
-      brand
+      brand,
+      minPrice,
+      maxPrice
     );
 
     res.set("x-total-product", result.totalData[0].total_data);
