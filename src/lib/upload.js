@@ -28,7 +28,7 @@ const upload = (destination, fileNamePrefix) => {
 
   const fileFilter = (req, file, cb) => {
     // tambahkan extention yang mau di upload jika tidak ada disini
-    const ext = /\.(jpg|jpeg|png|JPEG|JPG)$/; //regex
+    const ext = /\.(jpg|jpeg|png|PNG|webp|JPEG|JPG)$/; //regex
     if (!file.originalname.match(ext)) {
       return cb(new Error("Only selected file type are allowed"), false);
     }

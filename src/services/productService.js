@@ -567,7 +567,9 @@ const getHomeProductService = async (
   orderPrice,
   symptom,
   type,
-  brand
+  brand,
+  minPrice,
+  maxPrice
 ) => {
   let conn, sql;
 
@@ -626,9 +628,29 @@ const getHomeProductService = async (
     order = `ORDER BY product.name ${orderName}`;
   } else if (!orderName && orderPrice) {
     order = `ORDER BY product.price ${orderPrice}`;
-  } else if (orderName && orderPrice) {
-    order = `ORDER BY product.name ${orderName}, product.price ${orderPrice}`;
   }
+
+  let priceRange;
+  if (!minPrice && !maxPrice) {
+    priceRange = ``;
+  } else if (minPrice && !maxPrice) {
+    priceRange = `AND product.price >= '${minPrice}'`;
+  } else if (!minPrice && maxPrice) {
+    priceRange = `AND product.price <= '${maxPrice}'`;
+  } else if (minPrice && maxPrice) {
+    priceRange = `AND product.price between '${minPrice}' and '${maxPrice}'`;
+  }
+  // else if (orderName && orderPrice) {
+  //   order = `ORDER BY product.name ${orderName}, product.price ${orderPrice}`;
+  // }
+
+  // if (!orderName) {
+  //   orderName = ``;
+  // } else {
+  //   orderName = `ORDER BY product.name ${orderName}`;
+  // }
+
+  // if(!orderPrice){}
 
   // if (!orderPrice) {
   //   orderPrice = ``;
@@ -654,7 +676,7 @@ const getHomeProductService = async (
     inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
     inner join (select symptom_id,product_id from symptom_product ${symptom}) as symptom_product on product.id = symptom_product.product_id
     left join (select name as symptom_name, id from symptom) as symptom on symptom_id = symptom.id
-    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} AND product.is_deleted = "NO"
+    left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} ${priceRange} AND product.is_deleted = "NO"
     group by product.id ${order} LIMIT ${dbCon.escape(offset)}, ${dbCon.escape(
       limit
     )}`;
@@ -696,7 +718,7 @@ const getHomeProductService = async (
       inner join (select name as brand_name,id from brand) as brand on product.brand_id = brand.id
       inner join (select symptom_id,product_id from symptom_product ${symptom}) as symptom_product on product.id = symptom_product.product_id
       left join (select name as symptom_name, id from symptom) as symptom on symptom_id = symptom.id
-      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} AND product.is_deleted = "NO"
+      left join (select name as category_name, id from category) as kategori on category_id = kategori.id where true ${search} ${category} ${type} ${brand} ${priceRange} AND product.is_deleted = "NO"
       group by product.id) as table_data`;
 
     let [totalData] = await conn.query(sql);

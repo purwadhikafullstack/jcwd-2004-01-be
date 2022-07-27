@@ -398,12 +398,12 @@ const addAddressService = async (data, id) => {
     // sql = `select address, province_id, city_id, recipient_number, recipient_name, address_label, is_default from address where user_id = ?`;
     // let [userAddress] = await conn.query(sql, id);
 
-    sql = `select id from address where address = ? and province_id = ? and city_id = ?`;
-    let [userAddress1] = await conn.query(sql, [address, province_id, city_id]);
+    // sql = `select id from address where address = ? and province_id = ? and city_id = ?`;
+    // let [userAddress1] = await conn.query(sql, [address, province_id, city_id]);
 
-    if (userAddress1.length) {
-      throw "Please insert different address!";
-    }
+    // if (userAddress1.length) {
+    //   throw "Please insert different address!";
+    // }
 
     // if (userAddress.length) {
     //   for (let i = 0; i < userAddress.length; i++) {
