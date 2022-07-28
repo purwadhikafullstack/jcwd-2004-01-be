@@ -316,7 +316,7 @@ const checkoutService = async (data, id) => {
       recipient: data.recipient,
       delivery_fee: data.delivery_fee,
       total_price: data.total_price,
-      transaction_code: codeGenerator("TRA", data.phone_number),
+      transaction_code: codeGenerator("TRA", id),
       expired_at: dayjs(new Date()).add(1, "day").format("YYYY-MM-DD HH:mm:ss"),
       is_prescription: 2,
     };
